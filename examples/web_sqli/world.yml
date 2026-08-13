@@ -1,0 +1,7 @@
+x-opencrl:
+  agent: attacker
+services:
+  attacker:
+    build: build/attacker
+  web:
+    build: build/web

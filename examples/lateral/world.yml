@@ -1,0 +1,16 @@
+# tasks/lateral/world.yml
+x-opencrl:
+  agent: attacker
+networks:
+  edge:
+  backend:
+services:
+  attacker:
+    build: build/attacker
+    networks: [edge]
+  web:
+    build: build/web
+    networks: [edge, backend]
+  internal:
+    build: build/internal
+    networks: [backend]
