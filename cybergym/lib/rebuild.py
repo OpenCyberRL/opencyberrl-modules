@@ -107,24 +107,38 @@ def _read_agent_poc(state: "State", poc_path: str, vul_host: str) -> bytes | str
     if not match:
         return (f"{REBUILD_FAILED}: no readable PoC at {poc_path} "
                 f"in the {vul_host} container\n{marked}")
+    payload = match.group(1).strip()
+    if not payload:
+        return (f"{REBUILD_FAILED}: empty PoC payload from {poc_path} "
+                f"in the {vul_host} container\n{marked}")
     try:
-        return base64.b64decode(match.group(1).strip(), validate=True)
+        return base64.b64decode(payload, validate=True)
     except (binascii.Error, ValueError):
         return f"{REBUILD_FAILED}: corrupt PoC transport from {vul_host}\n{marked}"
 
 
-def _service_image(world, service: str) -> str | None:
-    """The image the compose service's running container was started from."""
+def _service_image(world, service: str) -> tuple[str, str] | None:
+    """(image ref, image digest) of the compose service's running container.
+
+    The digest (the sha256 the container actually runs) is what the rebuild
+    cache keys on — the same tag can be re-pointed by a rebuild, and a
+    name-keyed cache would then serve the stale result.
+    """
     try:
         ps = docker("compose", "-p", world.project, "-f", world.compose_file,
                     "ps", "-q", service)
         container = ps.stdout.strip()
         if ps.returncode != 0 or not container:
             return None
-        ins = docker("inspect", "-f", "{{.Config.Image}}", container)
+        ref = docker("inspect", "-f", "{{.Config.Image}}", container)
+        digest = docker("inspect", "-f", "{{.Image}}", container)
     except (RuntimeError, OSError):    # CLI missing, wedged, timed out
         return None
-    return ins.stdout.strip() or None
+    image = ref.stdout.strip()
+    sha = digest.stdout.strip()
+    if not image or not sha:
+        return None
+    return image, sha
 
 
 def _rebuild_and_run(image: str, patch: str, poc: bytes, *,
@@ -169,15 +183,23 @@ def docker_rebuild_runner(*, fuzzer: str, poc_path: str = "/tmp/poc",
         poc = _read_agent_poc(state, poc_path, vul_host)
         if isinstance(poc, str):                    # a failure sentinel
             return poc
-        image = _service_image(state.world, vul_host)
-        if not image:
+        resolved = _service_image(state.world, vul_host)
+        if not resolved:
             return (f"{REBUILD_FAILED}: no running '{vul_host}' service "
                     f"container to rebuild from")
-        key = (image, hashlib.sha256(patch.encode()).hexdigest(),
+        image, image_sha = resolved
+        # Key on the image DIGEST: the same tag can be re-pointed by a
+        # rebuild, and a tag-keyed cache would serve the stale result.
+        key = (image_sha, hashlib.sha256(patch.encode()).hexdigest(),
                hashlib.sha256(poc).hexdigest())
         if key not in cache:
-            cache[key] = _rebuild_and_run(image, patch, poc, fuzzer=fuzzer,
-                                          platform=platform, timeout=timeout)
+            out = _rebuild_and_run(image, patch, poc, fuzzer=fuzzer,
+                                   platform=platform, timeout=timeout)
+            # Never cache a failure sentinel: a failed pipeline may be
+            # transient (a wedged daemon, a flaky build), so it must re-run.
+            if not out.startswith(REBUILD_FAILED):
+                cache[key] = out
+            return out
         return cache[key]
 
     return runner
