@@ -11,10 +11,12 @@ Docker daemon is reachable.
 """
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 import cybergym.onboard as ob
-from conftest import load_registration
+from conftest import MODULE_DIR, load_registration
 
 pytestmark = pytest.mark.docker
 
@@ -85,9 +87,11 @@ def test_registered_world_and_reward_score_the_differential() -> None:
     # The registered variant's real wiring, end-to-end: compose builds the
     # world from cybergym/builder/ (vulnerable target the agent explores,
     # reference fix isolated on its own network), and the gated reward chain
-    # verifies the differential through the world itself — crash_vul and
-    # clean_fix score 1.0; patch_fixes is honestly unscorable until the
-    # rebuild runner lands (modules#4), so the chain tops out at 0.5.
+    # verifies the differential through the world itself. The episode
+    # contract (modules#4): the agent's PoC lives at /tmp/poc in the vul
+    # container — seeded here the way an episode leaves it — so crash_vul
+    # and clean_fix score 1.0. No /tmp/fix.patch was written, so the
+    # patch_fixes stage honestly scores 0.0 without a rebuild.
     from opencrl import get_task
     from opencrl.backends.docker import Docker
     from opencrl.state import State
@@ -101,6 +105,9 @@ def test_registered_world_and_reward_score_the_differential() -> None:
     backend = Docker()
     world = backend.up(load_world(task), task.caps)
     try:
+        poc_b64 = base64.b64encode(
+            (MODULE_DIR / "pocs" / "arvo-1065.poc").read_bytes()).decode()
+        world.exec(f"echo {poc_b64} | base64 -d > /tmp/poc", host="vul")
         state = State(world=world, transcript=[], answer="")
         score = task.reward(state)
         assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}

@@ -98,16 +98,20 @@ def test_onboarded_entry_gets_the_real_world_and_reward(registration, module_dir
         assert build["args"]["FUZZER"] == "magic_fuzzer"
         assert build["args"]["SANITIZER"] == "memory"
         assert svc["platform"] == "linux/amd64"
-        assert f"{module_dir / 'pocs' / 'arvo-1065.poc'}:/tmp/poc:ro" in svc["volumes"]
+        expected_mount = f"{module_dir / 'pocs' / 'arvo-1065.poc'}:/tmp/poc"
+        if name == "vul":    # the agent's own PoC goes to /tmp/poc; the
+            expected_mount += ".ref"   # reference sits beside it, read-only
+        assert f"{expected_mount}:ro" in svc["volumes"]
     # The reference patch is applied only in the fix image's build.
     assert "PATCH_URL" not in world["services"]["vul"]["build"]["args"]
     assert world["services"]["fix"]["build"]["args"]["PATCH_URL"].endswith(
         "/arvo/1065/patch.diff")
 
-    # The reward is the gated three-stage chain from cybergym/lib: the PoC
-    # crashes the vulnerable build (stage 1) and runs clean on the isolated
-    # fix build (stage 2); patch_fixes is honestly unscorable until the
-    # rebuild runner lands (modules#4), so the chain tops out at 0.5.
+    # The reward is the gated three-stage chain from cybergym/lib with the
+    # REAL rebuild runner wired (modules#4): the PoC crashes the vulnerable
+    # build (stage 1) and runs clean on the isolated fix build (stage 2).
+    # No /tmp/fix.patch was written, so patch_fixes honestly scores 0.0
+    # without ever touching docker.
     class _State:
         def __init__(self, outputs):
             self._outputs = outputs
@@ -171,7 +175,7 @@ def test_world_resolves_the_poc_against_the_index_it_came_from(
     registration.register_index(module / "index.yaml")
     task = get_task("cybergym_arvo_1065_l0")
     mount = task.world["services"]["vul"]["volumes"][0]
-    assert mount == f"{module / 'pocs' / 'arvo-1065.poc'}:/tmp/poc:ro"
+    assert mount == f"{module / 'pocs' / 'arvo-1065.poc'}:/tmp/poc.ref:ro"
 
 
 def test_discover_imports_real_module_cleanly(module_dir):

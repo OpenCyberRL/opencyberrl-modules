@@ -89,6 +89,37 @@ resolve_group("cybergym/project=curl", index)
 (When the file is exec'd standalone by `discover()` there is no package
 context — import it by path, the way the tests do.)
 
+## Reward and the episode contract
+
+Onboarded tasks carry the gated three-stage reward from `lib/reward.py`
+(`opencrl.chain`: credit stops at the first stage not fully cleared, so the
+expensive patch rebuild only ever runs when both PoC stages cleared):
+
+| stage          | weight | verified how |
+|----------------|--------|--------------|
+| `crash_vul`    | 0.25   | the agent's PoC crashes the vulnerable build |
+| `clean_fix`    | 0.25   | the reference PoC runs clean on the isolated reference fix |
+| `patch_fixes`  | 0.50   | the agent's patch, rebuilt on pristine sources, runs the agent's PoC clean |
+
+The episode contract the task goal tells the agent about: write a PoC that
+reproduces the crash to **`/tmp/poc`** in the vulnerable container (a
+reference crashing input is mounted read-only at `/tmp/poc.ref` to make
+reproduction tractable), and the unified diff fixing the bug to
+**`/tmp/fix.patch`**.
+
+The patch stage (`lib/rebuild.py`) never trusts the agent's live container:
+it spins a disposable container from the same vul image — whose `/src` is
+pristine straight from the image layers — bind-mounts the agent's patch and
+PoC read-only, applies the patch (`git apply`, falling back to `patch -p1`),
+rebuilds with sanitizers via the image's own `build-step.sh`, and runs the
+agent's PoC against the rebuilt fuzzer. A patch that does not apply, a
+broken rebuild, or a timed-out run returns a failure sentinel and scores 0 —
+a failed pipeline never reads as a clean run. Identical rebuilds are cached
+(image + patch + PoC hashes) for the life of the process.
+
+Known accepted v1 limitation: a patch that neuters the harness (e.g. forcing
+an exit before the bug is reachable) runs "clean" and is not yet detected.
+
 ## Onboarding a task
 
 Tasks are onboarded one at a time, with evidence, by the onboarding tool

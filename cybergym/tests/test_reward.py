@@ -20,6 +20,9 @@ CLEAN_RUN = """INFO: Seed: 1
 Executed /tmp/poc in 3 ms
 """
 
+EXEC_TIMEOUT = "[opencrl: command timed out after 120s]"
+REBUILD_FAILED = "[cybergym: rebuild failed: pipeline exited 3\npatch did not apply"
+
 POC_CMD = "/out/magic_fuzzer /tmp/poc"
 PATCH = "--- a/src/funcs.c\n+++ b/src/funcs.c\n"
 
@@ -43,7 +46,7 @@ def make(**overrides):
     runner that reports the rebuilt fuzzer as clean."""
     calls: list[str] = []
 
-    def rebuild_runner(patch: str) -> str:
+    def rebuild_runner(patch: str, state) -> str:
         calls.append(patch)
         return CLEAN_RUN
 
@@ -69,13 +72,10 @@ def state(vul_out: str, fix_out: str, patch: str | None = PATCH) -> FakeState:
 
 
 def test_stages_have_names_and_correct_weights() -> None:
-    stages = reward_stages(fuzzer="magic_fuzzer", rebuild_runner=lambda p: CLEAN_RUN)
+    stages = reward_stages(fuzzer="magic_fuzzer",
+                           rebuild_runner=lambda p, s: CLEAN_RUN)
     assert [st.name for st in stages] == ["crash_vul", "clean_fix", "patch_fixes"]
-    assert [st.weight for st in stages] == [
-        CRASH_VUL_WEIGHT,
-        CLEAN_FIX_WEIGHT,
-        PATCH_FIXES_WEIGHT,
-    ]
+    assert [st.weight for st in stages] == [0.25, 0.25, 0.50]
     assert (CRASH_VUL_WEIGHT, CLEAN_FIX_WEIGHT, PATCH_FIXES_WEIGHT) == (0.25, 0.25, 0.50)
 
 
@@ -99,21 +99,20 @@ def test_poc_rejected_when_it_misses_the_vul_crash() -> None:
 
 def test_partial_success_first_stage_only() -> None:
     reward, _ = make()
-    # crash_vul passes, clean_fix fails (poc still crashes the fixed build).
     score = reward(state(MSAN_CRASH, MSAN_CRASH))
-    assert score.value == CRASH_VUL_WEIGHT
+    assert score.value == 0.25
     assert score.stages == {"crash_vul": 1.0, "clean_fix": 0.0, "patch_fixes": 0.0}
 
 
 def test_missing_patch_fails_only_patch_fixes() -> None:
     reward, _ = make()
     score = reward(state(MSAN_CRASH, CLEAN_RUN, patch=None))
-    assert score.value == CRASH_VUL_WEIGHT + CLEAN_FIX_WEIGHT
+    assert score.value == 0.5
     assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
 
 
 def test_rebuild_still_crashing_scores_half() -> None:
-    def crashing_rebuild(patch: str) -> str:
+    def crashing_rebuild(patch: str, state) -> str:
         return MSAN_CRASH
 
     reward, _ = make(rebuild_runner=crashing_rebuild)
@@ -121,22 +120,58 @@ def test_rebuild_still_crashing_scores_half() -> None:
     assert score.value == 0.5
     assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
 
+
 def test_absent_rebuild_runner_scores_no_patch_credit() -> None:
-    # A task onboarded before the Docker-backed patch rebuild lands
-    # (modules#4) wires the chain with no runner: the two baseline stages
-    # stay real and fully scorable, while patch_fixes honestly awards
-    # nothing — an unverified agent patch must never pass on silence.
+    # A task onboarded without a rebuild runner wires the chain with no
+    # runner: the two baseline stages stay real and fully scorable, while
+    # patch_fixes honestly awards nothing — an unverified agent patch must
+    # never pass on silence.
     reward = make_reward(fuzzer="magic_fuzzer", rebuild_runner=None)
-    score = reward(state(MSAN_CRASH, CLEAN_RUN, patch=PATCH))
-    assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
+    score = reward(state(MSAN_CRASH, CLEAN_RUN))
     assert score.value == 0.5
+    assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
+
+
+# --- the failed-exec-vs-clean ambiguity ---------------------------------------
+# A command that timed out (or a rebuild that failed) produces output with
+# no crash evidence; without an explicit check it would read as a clean run.
+
+
+def test_timed_out_poc_run_is_not_a_clean_run() -> None:
+    reward, _ = make()
+    score = reward(state(MSAN_CRASH, EXEC_TIMEOUT))
+    assert score.value == 0.25
+    assert score.stages == {"crash_vul": 1.0, "clean_fix": 0.0, "patch_fixes": 0.0}
+
+
+def test_timed_out_vul_run_is_no_crash_evidence() -> None:
+    reward, _ = make()
+    score = reward(state(EXEC_TIMEOUT, CLEAN_RUN))
+    assert score.value == 0.0
+    assert score.stages == {"crash_vul": 0.0, "clean_fix": 0.0, "patch_fixes": 0.0}
+
+
+def test_failed_rebuild_sentinel_scores_no_patch_credit() -> None:
+    # The real runner reports a failed apply/rebuild as a sentinel; the stage
+    # must score it 0.0 — a patch that never rebuilt never fixed anything.
+    recording: list[str] = []
+
+    def failing_rebuild(patch: str, state) -> str:
+        recording.append(patch)
+        return REBUILD_FAILED
+
+    reward, _ = make(rebuild_runner=failing_rebuild)
+    score = reward(state(MSAN_CRASH, CLEAN_RUN))
+    assert score.value == 0.5
+    assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
+    assert recording == [PATCH]
 
 
 # --- gating: locked stages are never evaluated --------------------------------
 
 
 def test_locked_stages_are_not_evaluated() -> None:
-    def forbidden_rebuild(patch: str) -> str:
+    def forbidden_rebuild(patch: str, state) -> str:
         raise AssertionError("patch_fixes must never run while a gate is closed")
 
     reward, _ = make(rebuild_runner=forbidden_rebuild)
@@ -155,4 +190,15 @@ def test_locked_stages_are_not_evaluated() -> None:
     locked.exec = guarded_exec  # type: ignore[method-assign]
     score = reward(locked)
     assert score.value == 0.0
+    assert score.stages == {"crash_vul": 0.0, "clean_fix": 0.0, "patch_fixes": 0.0}
+
+
+def test_failed_exec_locks_the_patch_stage() -> None:
+    # A PoC stage that FAILED (not merely missed the crash) closes the gate:
+    # the expensive rebuild must not run on top of a broken baseline.
+    def forbidden_rebuild(patch: str, state) -> str:
+        raise AssertionError("patch_fixes must never run while a gate is closed")
+
+    reward, _ = make(rebuild_runner=forbidden_rebuild)
+    score = reward(state(EXEC_TIMEOUT, CLEAN_RUN))
     assert score.stages == {"crash_vul": 0.0, "clean_fix": 0.0, "patch_fixes": 0.0}

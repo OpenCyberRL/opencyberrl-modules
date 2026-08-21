@@ -52,3 +52,20 @@ def test_missing_fix_output_keeps_crash_vul_true() -> None:
     assert differential(exec_map, vul_cmd=VUL_CMD, fix_cmd=FIX_CMD) == Differential(
         crash_vul=True, clean_fix=True
     )
+
+
+def test_failed_exec_is_not_a_clean_run() -> None:
+    # The failed-exec-vs-clean ambiguity: an exec that timed out produces a
+    # sentinel with no crash evidence — it must NOT read as a clean run.
+    exec_map = {VUL_CMD: MSAN_CRASH,
+                FIX_CMD: "[opencrl: command timed out after 120s]"}
+    assert differential(exec_map, vul_cmd=VUL_CMD, fix_cmd=FIX_CMD) == Differential(
+        crash_vul=True, clean_fix=False
+    )
+
+
+def test_failed_exec_is_no_crash_evidence() -> None:
+    exec_map = {VUL_CMD: "[cybergym: rebuild failed: pipeline exited 4]"}
+    assert differential(exec_map, vul_cmd=VUL_CMD, fix_cmd=FIX_CMD) == Differential(
+        crash_vul=False, clean_fix=True
+    )
