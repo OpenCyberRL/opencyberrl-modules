@@ -121,6 +121,16 @@ def test_rebuild_still_crashing_scores_half() -> None:
     assert score.value == 0.5
     assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
 
+def test_absent_rebuild_runner_scores_no_patch_credit() -> None:
+    # A task onboarded before the Docker-backed patch rebuild lands
+    # (modules#4) wires the chain with no runner: the two baseline stages
+    # stay real and fully scorable, while patch_fixes honestly awards
+    # nothing — an unverified agent patch must never pass on silence.
+    reward = make_reward(fuzzer="magic_fuzzer", rebuild_runner=None)
+    score = reward(state(MSAN_CRASH, CLEAN_RUN, patch=PATCH))
+    assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
+    assert score.value == 0.5
+
 
 # --- gating: locked stages are never evaluated --------------------------------
 
