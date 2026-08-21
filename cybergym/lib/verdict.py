@@ -27,6 +27,11 @@ def differential(exec_map: Mapping[str, str], *, vul_cmd: str, fix_cmd: str) -> 
 
     vul_cmd and fix_cmd are the commands that run the same PoC in the
     vulnerable and the fixed container (e.g. ``docker exec <c> /out/f /tmp/poc``).
+
+    Caveat for live wiring: an exec that failed or timed out contributes
+    whatever output it produced — indistinguishable here from a clean run.
+    Ticket modules#4 must distinguish them (e.g. an explicit exit-status
+    sentinel in the exec map) before clean_fix gates real scoring.
     """
     return Differential(
         crash_vul=poc_crashes(exec_map.get(vul_cmd, "")),

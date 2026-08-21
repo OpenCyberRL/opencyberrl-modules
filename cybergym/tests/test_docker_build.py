@@ -15,7 +15,12 @@ pytestmark = pytest.mark.docker
 ARVO_1065 = "arvo:1065"
 FUZZER = "magic_fuzzer"
 BUILD_DIR = "file"          # the tarball's project subdir where build.sh runs
-SANITIZER = "memory"        # arvo:1065 is a MemorySanitizer task
+# arvo:1065 is a MemorySanitizer task, but the MSan-instrumented libc++ ships
+# only in the amd64 base image; everywhere else build-step.sh fails the build
+# fast (test_msan_build_fails_fast_off_amd64 below). The build integration
+# therefore exercises the host's native platform with AddressSanitizer, which
+# the base image fully supports on every architecture.
+SANITIZER = "address"
 # The file project's build.sh needs autotools beyond base-builder (mirrors
 # the oss-fuzz projects/file Dockerfile). Deliberately NOT the compression
 # dev libs: the reference build ran without them, so configure disabled
@@ -23,35 +28,53 @@ SANITIZER = "memory"        # arvo:1065 is a MemorySanitizer task
 # never linked against.
 EXTRA_PKGS = "make autoconf automake libtool shtool"
 
-requires_docker = pytest.mark.skipif(
-    docker("info").returncode != 0, reason="docker daemon not reachable"
-)
+
+def _docker_available() -> bool:
+    try:
+        return docker("info").returncode == 0
+    except (OSError, RuntimeError):     # CLI missing, or daemon wedged
+        return False
+
+
+def _docker_arch() -> str:
+    try:
+        # `docker info` reports the Go architecture ("aarch64"); `docker
+        # version` reports the platform name ("arm64").
+        return docker("info", "--format", "{{.Architecture}}").stdout.strip()
+    except (OSError, RuntimeError):
+        return ""
+
+requires_docker = pytest.mark.skipif(not _docker_available(), reason="docker daemon not reachable")
 
 
 @pytest.fixture(scope="module")
 def images():
-    """Build the real vulnerable and fixed images for arvo:1065."""
+    """Build the real vulnerable and fixed images for arvo:1065; remove them
+    afterwards (each is ~2GB) so repeated runs don't fill the disk."""
     tag = f"cybergym-1065-test-{uuid.uuid4().hex[:8]}"
-    build_image(
-        DOCKERFILE_VUL,
-        f"{tag}:vul",
-        repo_url=hf_url(ARVO_1065, "repo-vul.tar.gz"),
-        fuzzer=FUZZER,
-        sanitizer=SANITIZER,
-        build_dir=BUILD_DIR,
-        extra_pkgs=EXTRA_PKGS,
-    )
-    build_image(
-        DOCKERFILE_FIX,
-        f"{tag}:fix",
-        repo_url=hf_url(ARVO_1065, "repo-vul.tar.gz"),
-        patch_url=hf_url(ARVO_1065, "patch.diff"),
-        fuzzer=FUZZER,
-        sanitizer=SANITIZER,
-        build_dir=BUILD_DIR,
-        extra_pkgs=EXTRA_PKGS,
-    )
-    return f"{tag}:vul", f"{tag}:fix"
+    try:
+        build_image(
+            DOCKERFILE_VUL,
+            f"{tag}:vul",
+            repo_url=hf_url(ARVO_1065, "repo-vul.tar.gz"),
+            fuzzer=FUZZER,
+            sanitizer=SANITIZER,
+            build_dir=BUILD_DIR,
+            extra_pkgs=EXTRA_PKGS,
+        )
+        build_image(
+            DOCKERFILE_FIX,
+            f"{tag}:fix",
+            repo_url=hf_url(ARVO_1065, "repo-vul.tar.gz"),
+            patch_url=hf_url(ARVO_1065, "patch.diff"),
+            fuzzer=FUZZER,
+            sanitizer=SANITIZER,
+            build_dir=BUILD_DIR,
+            extra_pkgs=EXTRA_PKGS,
+        )
+        yield f"{tag}:vul", f"{tag}:fix"
+    finally:
+        docker("rmi", "-f", f"{tag}:vul", f"{tag}:fix")
 
 
 def _tcp_unreachable(src: str, dst_ip: str, port: int) -> bool:
@@ -98,3 +121,24 @@ def test_fix_container_is_isolated_from_the_agent(images) -> None:
         # 4. The verifier still reaches the fix container via docker exec,
         #    which is host-level and ignores network topology.
         assert docker("exec", topo.fix, "test", "-x", f"/out/{FUZZER}").returncode == 0
+
+
+@requires_docker
+@pytest.mark.skipif(_docker_arch() != "aarch64",
+                    reason="only relevant where the base image lacks /usr/msan (amd64 ships it)")
+def test_msan_build_fails_fast_off_amd64() -> None:
+    """SANITIZER=memory without the MSan-instrumented libc++ must fail the
+    build loudly, not silently link uninstrumented libc++ (whose false
+    positives would poison the clean_fix verification)."""
+    tag = f"cybergym-msan-guard-{uuid.uuid4().hex[:8]}"
+    with pytest.raises(RuntimeError) as excinfo:
+        build_image(
+            DOCKERFILE_VUL,
+            tag,
+            repo_url=hf_url(ARVO_1065, "repo-vul.tar.gz"),
+            fuzzer=FUZZER,
+            sanitizer="memory",
+            build_dir=BUILD_DIR,
+            extra_pkgs=EXTRA_PKGS,
+        )
+    assert "MSan-instrumented libc++" in str(excinfo.value)

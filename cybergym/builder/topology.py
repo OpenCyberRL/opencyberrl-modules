@@ -14,11 +14,19 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 
-def docker(*args: str) -> subprocess.CompletedProcess:
-    """Run a docker CLI command; never raises — inspect returncode."""
-    return subprocess.run(["docker", *args], capture_output=True, text=True,
-                          errors="replace")
-
+def docker(*args: str, timeout: float = 120) -> subprocess.CompletedProcess:
+    """Run a docker CLI command and return the CompletedProcess — callers
+    inspect returncode; the command's own failures (unknown flag, missing
+    container) surface as a nonzero returncode rather than an exception.
+    Raises RuntimeError if the command exceeds `timeout` seconds, and
+    FileNotFoundError if the docker CLI itself is not installed."""
+    try:
+        return subprocess.run(["docker", *args], capture_output=True, text=True,
+                              errors="replace", timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"docker {' '.join(args)} timed out after {timeout}s"
+        ) from exc
 
 @dataclass(frozen=True)
 class SplitTopology:

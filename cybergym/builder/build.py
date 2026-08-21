@@ -2,11 +2,17 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 BUILDER_DIR = Path(__file__).resolve().parent
 DOCKERFILE_VUL = BUILDER_DIR / "Dockerfile.vul"
 DOCKERFILE_FIX = BUILDER_DIR / "Dockerfile.fix"
+BUILD_STEP = BUILDER_DIR / "build-step.sh"
+# A wedged docker build must hang no longer than this before build_image
+# raises, instead of blocking forever with no feedback.
+BUILD_TIMEOUT = 3600.0
+
 DEFAULT_BASE_IMAGE = (
     # Digest-pinned multi-arch manifest list (linux/amd64 + linux/arm64) of
     # gcr.io/oss-fuzz-base/base-builder:manifest-latest — the plain :latest
@@ -25,9 +31,13 @@ HF_DATASET = "sunblaze-ucb/cybergym"
 def hf_url(task_id: str, filename: str) -> str:
     """URL of an artifact in the CyberGym Hugging Face dataset.
 
-    task_id uses the dataset's "arvo:1065" / "oss-fuzz:42535201" form.
+    task_id uses the dataset's "arvo:1065" / "oss-fuzz:42535201" form; a
+    malformed id raises ValueError here instead of producing a URL that only
+    fails later, at curl time.
     """
-    kind, _, number = task_id.partition(":")
+    kind, sep, number = task_id.partition(":")
+    if not (kind and sep and number):
+        raise ValueError(f"task_id must look like 'arvo:1065', got {task_id!r}")
     return (
         f"https://huggingface.co/datasets/{HF_DATASET}"
         f"/resolve/main/data/{kind}/{number}/{filename}"
@@ -80,8 +90,18 @@ def build_image(
         args += ["--platform", platform]
     args.append(str(BUILDER_DIR))
 
-    result = subprocess.run(args, capture_output=True, text=True, errors="replace")
+    try:
+        result = subprocess.run(args, capture_output=True, text=True,
+                                errors="replace", timeout=BUILD_TIMEOUT)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"docker build of {tag} timed out after {BUILD_TIMEOUT:.0f}s: "
+            f"{' '.join(args)}"
+        ) from exc
     if result.returncode != 0:
         tail = (result.stdout + result.stderr)[-2000:]
-        raise RuntimeError(f"docker build of {tag} failed (exit {result.returncode}):\n{tail}")
+        print(f"docker build of {tag} failed:\n{tail}", file=sys.stderr)
+        raise RuntimeError(
+            f"docker build of {tag} failed (exit {result.returncode}):\n{tail}"
+        )
     return tag

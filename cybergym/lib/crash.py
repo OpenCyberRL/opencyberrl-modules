@@ -23,7 +23,7 @@ _FAMILY_RE = re.compile(
 )
 # Standalone UBSan reports may print no SUMMARY line; their reports always
 # carry a source-location prefix, e.g. "/src/x.c:12:34: runtime error: ...".
-_UBSAN_RUNTIME_RE = re.compile(r"[\w./+-]+:\d+:\d+: runtime error: ")
+_UBSAN_RUNTIME_RE = re.compile(r"[\w./+-]+:\d+:\d+: runtime error:")
 # DEDUP_TOKEN holds the rest of the line verbatim: tokens are frame names
 # joined by "--" and C++ frame names contain spaces.
 _DEDUP_RE = re.compile(r"^\s*DEDUP_TOKEN:\s*(.+?)\s*$", re.MULTILINE)
@@ -44,7 +44,10 @@ def crash_signature(output: str) -> CrashSignature | None:
     Reports may contain several DEDUP_TOKEN lines (MSan also prints stacks
     for where the uninitialized value was stored and created). The FIRST
     token tags the crashing stack, so it is the one kept as the bug's
-    identity; later tokens tag origin stacks.
+    identity; later tokens tag origin stacks. Likewise, when a run's output
+    carries reports from more than one sanitizer family (one report
+    cascading into another), the FIRST report wins: it names the sanitizer
+    that actually fired.
     """
     match = _FAMILY_RE.search(output)
     if match:

@@ -6,7 +6,10 @@
 #              land in /src exactly as OSS-Fuzz expects: build.sh, the fuzzer
 #              harness(es) and the project sources.
 #   FUZZER     name of the fuzzer binary the build must produce in /out.
-#   SANITIZER  address | memory | undefined (default: address).
+#   SANITIZER  address | memory | undefined (default: address). memory needs
+#              the MSan-instrumented libc++ that only the amd64 base image
+#              ships — build-step.sh fails the build fast otherwise, rather
+#              than silently linking uninstrumented libc++.
 #   BUILD_DIR  project subdir of /src where build.sh runs (default: .). The
 #              dataset's build.sh scripts assume the OSS-Fuzz convention of
 #              WORKDIR being the project's own directory.
@@ -26,18 +29,12 @@
 # pulling amd64 and emulating. The fallback default linux/amd64 covers
 # non-BuildKit builders. For bit-reproducible output independent of the build
 # host, pass an explicit platform: `docker build --platform linux/amd64 ...`
-# (or build_image(..., platform="linux/amd64")).
+# (or build_image(..., platform="linux/amd64")) — MSan tasks must do exactly
+# that, per the SANITIZER note above.
 #
-# We deliberately do NOT invoke the base image's `compile` entrypoint: it
-# starts with `sysctl -w vm.mmap_rnd_bits=28`, which fails under unprivileged
-# `docker build` (read-only /proc/sys). The RUN below reproduces the parts of
-# compile/compile_libfuzzer that matter for C/C++ targets: merge the
-# sanitizer flags into CFLAGS/CXXFLAGS, stage the MSan-instrumented libc++
-# for memory builds, stage libFuzzer as /usr/lib/libFuzzingEngine.a, then run
-# the project's build.sh. The two base images lay out the clang runtime
-# differently (amd64: lib/<triple>/libclang_rt.fuzzer.a, arm64:
-# lib/linux/libclang_rt.fuzzer-<arch>.a), so the lookup handles both. Keep
-# this in sync with Dockerfile.fix.
+# The actual compile lives in build-step.sh (COPYed below), shared verbatim
+# with Dockerfile.fix; see its header for what it does and why the base
+# image's `compile` entrypoint cannot be used directly.
 #
 # The full toolchain, /src and /out stay in the image on purpose: the
 # patch-rebuild stage (ticket modules#4) recompiles in place.
@@ -52,35 +49,23 @@ ARG FUZZER
 ARG SANITIZER=address
 ARG BUILD_DIR=.
 ARG EXTRA_PKGS=
-ENV SANITIZER=${SANITIZER}
 
-# The build RUN needs bash-only syntax (indirect expansion ${!flags}); the
-# default /bin/sh (dash) would reject it.
+# The RUNs below use bash-only syntax ([[ ]], pipefail); the default /bin/sh
+# (dash) would reject them.
 SHELL ["/bin/bash", "-c"]
 
 # Project build dependencies, layered before the source unpack so the (more
 # stable) dependency layer stays cached when REPO_URL changes.
 RUN if [[ -n "$EXTRA_PKGS" ]]; then \
-        apt-get update && apt-get install -y $EXTRA_PKGS; \
+        apt-get update && apt-get install -y $EXTRA_PKGS && rm -rf /var/lib/apt/lists/*; \
     fi
 
-RUN mkdir -p /src \
+ENV SANITIZER=${SANITIZER}
+
+RUN set -o pipefail \
+ && mkdir -p /src \
  && curl -fsSL "$REPO_URL" | tar -xz --strip-components=1 -C /src
 WORKDIR /src/${BUILD_DIR}
 
-RUN flags="SANITIZER_FLAGS_${SANITIZER}" \
- && export CFLAGS="$CFLAGS ${!flags} $COVERAGE_FLAGS" \
- && export CXXFLAGS="$CFLAGS $CXXFLAGS_EXTRA" \
- && if [[ "$SANITIZER" == "undefined" ]]; then export CFLAGS="$CFLAGS -fno-sanitize=function"; fi \
- && if [[ -d /usr/msan ]]; then \
-        cp -R /usr/msan/lib/* /usr/local/lib/x86_64-unknown-linux-gnu/; \
-        cp -R /usr/msan/include/* /usr/local/include; \
-    fi \
- && rt="$(ls /usr/local/lib/clang/*/lib/${ARCHITECTURE}-unknown-linux-gnu/libclang_rt.fuzzer.a 2>/dev/null | head -1)" \
- && if [[ -z "$rt" ]]; then \
-        rt="$(ls /usr/local/lib/clang/*/lib/linux/libclang_rt.fuzzer-*.a 2>/dev/null | head -1)"; \
-    fi \
- && test -n "$rt" \
- && cp "$rt" /usr/lib/libFuzzingEngine.a \
- && bash -eux /src/build.sh \
- && test -x "$OUT/$FUZZER"
+COPY build-step.sh /usr/local/bin/build-step.sh
+RUN bash /usr/local/bin/build-step.sh
