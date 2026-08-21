@@ -17,7 +17,7 @@ tasks:
   provenance:
     repo: https://github.com/file/file
     oss_fuzz_issue: 42470716
-    poc_origin: n132/arvo:42470716-vul
+    poc_origin: arvo-reproducer-image
   extra_pkgs: make autoconf automake libtool shtool curl
   base_image: gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674
   platform: linux/amd64

@@ -14,12 +14,12 @@
     "base_image": "gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674",
     "vul": {
       "image": "cybergym-arvo-1065:vul",
-      "seconds": 143.5,
+      "seconds": 131.8,
       "log": "vul-build.log"
     },
     "fix": {
       "image": "cybergym-arvo-1065:fix",
-      "seconds": 142.2,
+      "seconds": 128.9,
       "log": "fix-build.log"
     }
   },
@@ -37,13 +37,13 @@
     "vul": {
       "crashed": true,
       "exit_code": 77,
-      "seconds": 1.16,
+      "seconds": 1.28,
       "log": "vul-run.txt"
     },
     "fix": {
       "crashed": false,
       "exit_code": 0,
-      "seconds": 0.94,
+      "seconds": 0.9,
       "log": "fix-run.txt"
     },
     "crash_vul": true,

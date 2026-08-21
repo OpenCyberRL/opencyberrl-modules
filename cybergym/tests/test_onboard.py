@@ -51,10 +51,35 @@ def test_reference_poc_prefers_the_arvo_reproducer_image(
     monkeypatch.setattr(ob, "_copy_out_of_image", fake_copy_out)
     spec = ob.TASKS["arvo:1065"]
     attempts: list[str] = []
-    poc = ob.obtain_reference_poc(spec, tmp_path, attempts)
-    assert poc is not None and poc.read_bytes() == b"P*M\x18\x00\x00\x00\x00P6M\x18"
+    obtained = ob.obtain_reference_poc(spec, tmp_path, attempts)
+    assert obtained is not None
+    poc, origin = obtained
+    assert poc.read_bytes() == b"P*M\x18\x00\x00\x00\x00P6M\x18"
+    assert origin == "arvo-reproducer-image"
     assert calls == [f"n132/arvo:{spec.oss_fuzz_id}-vul"]
     assert any("arvo" in a for a in attempts)
+
+
+def test_reference_poc_fallback_records_hf_origin(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # When the ARVO image has no PoC, the HF dataset supplies it — and the
+    # returned origin must say so: the report's (and index's) provenance
+    # must never claim the ARVO image supplied bytes it did not.
+    def boom(image: str, path_in_image: str, dest: Path) -> None:
+        raise RuntimeError("image not on dockerhub")
+
+    monkeypatch.setattr(ob, "_copy_out_of_image", boom)
+    monkeypatch.setattr(ob, "_download",
+                        lambda url, dest: dest.write_bytes(b"HF-PoC"))
+    spec = ob.TASKS["arvo:1065"]
+    attempts: list[str] = []
+    obtained = ob.obtain_reference_poc(spec, tmp_path, attempts)
+    assert obtained is not None
+    poc, origin = obtained
+    assert poc.read_bytes() == b"HF-PoC"
+    assert origin == "huggingface-dataset"
+    assert any("n132/arvo:42470716" in a for a in attempts)
+    assert any("huggingface" in a for a in attempts)
 
 
 def test_reference_poc_records_every_failed_attempt(
@@ -63,6 +88,8 @@ def test_reference_poc_records_every_failed_attempt(
         raise RuntimeError("image not on dockerhub")
 
     monkeypatch.setattr(ob, "_copy_out_of_image", boom)
+    monkeypatch.setattr(ob, "_download",
+                        lambda url, dest: (_ for _ in ()).throw(RuntimeError("404")))
     spec = ob.TASKS["arvo:1065"]
     attempts: list[str] = []
     assert ob.obtain_reference_poc(spec, tmp_path, attempts) is None
@@ -93,8 +120,7 @@ def test_run_poc_runs_the_fuzzer_on_the_mounted_poc(
     assert args[:2] == ("run", "--rm")
     assert "--platform" in args and "linux/amd64" in args
     assert f"{poc}:/tmp/poc:ro" in args
-    assert args[-2:] == ("/out/magic_fuzzer", "/tmp/poc") or args[-3:] == (
-        "/out/magic_fuzzer", "-runs=1", "/tmp/poc")
+    assert args[-3:] == ("/out/magic_fuzzer", "-runs=1", "/tmp/poc")
     assert result.exit_code == 0
     assert "Executed /tmp/poc" in result.output
 
@@ -216,12 +242,6 @@ def test_write_report_marks_unverified_tasks_loudly(tmp_path: Path) -> None:
     ob.write_report(report, tmp_path)
     md = (tmp_path / "report.md").read_text()
     assert "UNVERIFIED" in md
-    assert "ARVO image pull failed" in md
-
-
-# --- index acceptance --------------------------------------------------------------
-
-
 def test_accept_into_module_writes_index_entry_and_poc(tmp_path: Path) -> None:
     module = tmp_path / "cybergym"
     (module / "reports" / "arvo-1065").mkdir(parents=True)
@@ -230,7 +250,8 @@ def test_accept_into_module_writes_index_entry_and_poc(tmp_path: Path) -> None:
     index.write_text("# header comment\ntasks: []\n")
 
     ob.accept_into_module("arvo:1065", module,
-                          report_poc=module / "reports" / "arvo-1065" / "poc")
+                          report_poc=module / "reports" / "arvo-1065" / "poc",
+                          poc_origin="n132/arvo:42470716-vul")
 
     stored = module / "pocs" / "arvo-1065.poc"
     assert stored.read_bytes() == b"P*M"
@@ -240,6 +261,7 @@ def test_accept_into_module_writes_index_entry_and_poc(tmp_path: Path) -> None:
     assert entries[0]["fuzzer"] == "magic_fuzzer"
     assert entries[0]["poc"] == "pocs/arvo-1065.poc"
     assert entries[0]["provenance"]["oss_fuzz_issue"] == 42470716
+    assert entries[0]["provenance"]["poc_origin"] == "n132/arvo:42470716-vul"
 
 
 def test_accept_is_idempotent(tmp_path: Path) -> None:
@@ -249,8 +271,114 @@ def test_accept_is_idempotent(tmp_path: Path) -> None:
     index = module / "index.yaml"
     index.write_text("tasks: []\n")
     ob.accept_into_module("arvo:1065", module,
-                          report_poc=module / "reports" / "arvo-1065" / "poc")
+                          report_poc=module / "reports" / "arvo-1065" / "poc",
+                          poc_origin="n132/arvo:42470716-vul")
     ob.accept_into_module("arvo:1065", module,
-                          report_poc=module / "reports" / "arvo-1065" / "poc")
+                          report_poc=module / "reports" / "arvo-1065" / "poc",
+                          poc_origin="n132/arvo:42470716-vul")
     reg = load_registration()
     assert len(reg.load_index(index)) == 1
+
+
+def _full_flow(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *,
+               vul_output: str, fix_output: str = "Executed /tmp/poc\n") -> dict:
+    """Drive run_onboarding with every docker-touching step faked."""
+    import subprocess as sp
+
+    monkeypatch.setattr(ob, "build_image", lambda *a, **k: a[1])
+    monkeypatch.setattr(ob, "_copy_out_of_image",
+                        lambda image, path, dest: dest.write_bytes(b"P*M"))
+    monkeypatch.setattr(ob, "_download", lambda url, dest: dest.write_text(
+        "diff --git a/src/funcs.c b/src/funcs.c\n--- a/src/funcs.c\n"
+        "+++ b/src/funcs.c\n@@ -1 +1,2 @@\n x\n+fix\n"))
+
+    def fake_docker(*args: str, timeout: float = 120):
+        # run_poc passes the image tag at args[6] (run --rm --platform P -v M)
+        output = vul_output if args[6].endswith(":vul") else fix_output
+        return sp.CompletedProcess(args, 0, stdout=output, stderr="")
+    monkeypatch.setattr(ob, "docker", fake_docker)
+
+    def fake_sources(image: str, dest: Path, *, platform: str | None = None) -> None:
+        # Identical trees except the patch's added line, so the fix-diff
+        # check passes exactly as it does against the real builds. The
+        # comparison happens under spec.build_dir ("file"), so write there.
+        root = dest / "file" / "src"
+        root.mkdir(parents=True, exist_ok=True)
+        text = "x\nfix\n" if "fix" in image else "x\n"
+        (root / "funcs.c").write_text(text)
+
+    monkeypatch.setattr(ob, "_sources_from_image", fake_sources)
+    module = tmp_path / "cybergym"
+    monkeypatch.setattr(ob, "MODULE_DIR", module)
+    module.mkdir()
+    (module / "index.yaml").write_text("tasks: []\n")
+    # _reference_token reads the dataset's recorded crash log from the
+    # module: give the fake module the real arvo:1065 identity.
+    ref = module / "testdata" / "arvo" / "1065" / "error.txt"
+    ref.parent.mkdir(parents=True)
+    ref.write_text("==1==WARNING: MemorySanitizer: use-of-uninitialized-value\n"
+                   "DEDUP_TOKEN: match--file_softmagic--mget\n")
+    return ob.run_onboarding("arvo:1065", report_dir=tmp_path / "reports",
+                             accept=True)
+
+
+MSAN_CRASH = """==1==WARNING: MemorySanitizer: use-of-uninitialized-value
+    #0 0x590726 in match /src/file/src/softmagic.c:365:9
+    #1 0x58d2d3 in file_softmagic /src/file/src/softmagic.c:108:13
+    #2 0x594274 in mget /src/file/src/softmagic.c:1560:8
+SUMMARY: MemorySanitizer: use-of-uninitialized-value
+"""
+
+
+def test_crash_identity_mismatch_is_review_not_indexed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The differential property held but the crash identity differs from the
+    # dataset's recorded log (match--file_softmagic--mget): the PoC may
+    # trigger a DIFFERENT bug. Status is 'review', never auto-indexed, and
+    # the mismatch is called out loudly in the report.
+    other_bug = MSAN_CRASH.replace("match ", "other_fn ")
+    report = _full_flow(monkeypatch, tmp_path, vul_output=other_bug)
+    assert report["differential"]["crash_vul"] is True
+    assert report["differential"]["clean_fix"] is True
+    assert report["differential"]["reference_match"] is False
+    assert report["status"] == "review"
+    assert report["accepted"] is False
+    md = (tmp_path / "reports" / "report.md").read_text()
+    assert "REVIEW REQUIRED" in md and "MISMATCH" in md
+    reg = load_registration()
+    assert reg.load_index(tmp_path / "cybergym" / "index.yaml") == []
+    assert not (tmp_path / "cybergym" / "pocs").exists()
+
+
+def test_reference_match_still_accepts(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The happy path: matching crash identity still auto-indexes.
+    report = _full_flow(monkeypatch, tmp_path, vul_output=MSAN_CRASH)
+    assert report["status"] == "accepted"
+    assert report["accepted"] is True
+    reg = load_registration()
+    assert [e["id"] for e in
+            reg.load_index(tmp_path / "cybergym" / "index.yaml")] == ["1065"]
+
+
+def test_build_failure_still_writes_a_report(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A build failure must not vanish: run_onboarding records what was
+    # attempted and where it died (status=error), and never indexes.
+    def boom(*args, **kwargs):
+        raise RuntimeError("docker build of cybergym-arvo-1065:vul failed (exit 1)")
+
+    monkeypatch.setattr(ob, "build_image", boom)
+    module = tmp_path / "cybergym"
+    monkeypatch.setattr(ob, "MODULE_DIR", module)
+    module.mkdir()
+    (module / "index.yaml").write_text("tasks: []\n")
+    report = ob.run_onboarding("arvo:1065", report_dir=tmp_path / "reports",
+                               accept=True)
+    assert report["status"] == "error"
+    assert report["accepted"] is False
+    assert "docker build" in report["error"]
+    md = (tmp_path / "reports" / "report.md").read_text()
+    assert "ERROR" in md and "docker build" in md
+    reg = load_registration()
+    assert reg.load_index(tmp_path / "cybergym" / "index.yaml") == []

@@ -16,16 +16,16 @@
 #      runtime at all — compiled on the fly exactly like that era's
 #      compile_libfuzzer (with the RAW CXXFLAGS, before the coverage flags
 #      are merged in);
-#   4. merge the sanitizer flags (SANITIZER_FLAGS_${SANITIZER}) and the
+#   3. merge the sanitizer flags (SANITIZER_FLAGS_${SANITIZER}) and the
 #      coverage flags into CFLAGS/CXXFLAGS, as compile does;
-#   5. for UBSan, drop the "function" check (compile disables it for C code);
-#   6. for MSan, stage the MSan-instrumented libc++ from /usr/msan — and FAIL
+#   4. for UBSan, drop the "function" check (compile disables it for C code);
+#   5. for MSan, stage the MSan-instrumented libc++ from /usr/msan — and FAIL
 #      FAST when the base image has none: building an MSan target against
 #      uninstrumented libc++ yields false-positive crashes that would
 #      silently poison the clean_fix verification downstream. The copy goes
 #      both to the modern per-triple dir and to /usr/lib (where the
 #      2017-era toolchain resolves it), so either era links the right libc++.
-#   7. run the project's build.sh and require $OUT/$FUZZER to exist.
+#   6. run the project's build.sh and require $OUT/$FUZZER to exist.
 #
 # Expected environment (set by the Dockerfiles and the base image): SANITIZER,
 # FUZZER, and the OSS-Fuzz build env (CFLAGS, CXXFLAGS_EXTRA, COVERAGE_FLAGS,

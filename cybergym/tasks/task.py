@@ -111,8 +111,16 @@ def _normalize_entry(raw: Any, i: int) -> dict:
     if not isinstance(repo, str) or not repo.strip():
         raise ValueError(f"{where} needs provenance with a non-empty string 'repo'")
     entry["provenance"] = dict(provenance)
-    for key in _ONBOARDED_KEYS:
-        if key in entry and (not isinstance(entry[key], str) or not entry[key].strip()):
+    onboarded = [key for key in _ONBOARDED_KEYS if key in entry]
+    if onboarded and len(onboarded) != len(_ONBOARDED_KEYS):
+        # A partial recipe cannot silently downgrade to the placeholder
+        # wiring — a typo'd or truncated onboard entry must fail loudly.
+        missing = [k for k in _ONBOARDED_KEYS if k not in entry]
+        raise ValueError(
+            f"{where} has onboarding key(s) {onboarded} but is missing "
+            f"{missing}; entries carry the full build recipe or none of it")
+    for key in onboarded:
+        if not isinstance(entry[key], str) or not entry[key].strip():
             raise ValueError(f"{where} needs a non-empty string {key!r}")
     return entry
 
@@ -163,7 +171,7 @@ def _placeholder_reward() -> Any:
     return reward
 
 
-def _build_world(entry: Mapping[str, Any]) -> dict:
+def _build_world(entry: Mapping[str, Any], index_dir: Path) -> dict:
     """The compose world for an onboarded entry.
 
     ``vul`` is the vulnerable target the agent explores (sources, toolchain
@@ -172,7 +180,9 @@ def _build_world(entry: Mapping[str, Any]) -> dict:
     network so the agent cannot reach the reference solution. Both images
     are built from the module's own builder templates, so the world is
     reproducible from a fresh checkout. The backend renders every network
-    internal (Caps.needs_internet=False).
+    internal (Caps.needs_internet=False). index_dir is the directory of the
+    index file the entry came from — the PoC fixture path resolves against
+    it, so a copied module tree stays self-contained.
     """
     task_id = f"{entry['source']}:{entry['id']}"
     args = {
@@ -183,7 +193,7 @@ def _build_world(entry: Mapping[str, Any]) -> dict:
         "EXTRA_PKGS": entry.get("extra_pkgs", ""),
         "BASE_IMAGE": entry.get("base_image", DEFAULT_BASE_IMAGE),
     }
-    poc = str(INDEX_PATH.parent / entry["poc"])
+    poc = str(index_dir / entry["poc"])
     services = {
         "vul": {
             "build": {"context": str(_BUILDER_DIR),
@@ -209,7 +219,8 @@ def _build_world(entry: Mapping[str, Any]) -> dict:
     }
 
 
-def _build_task(entry: Mapping[str, Any], level: int) -> Task:
+def _build_task(entry: Mapping[str, Any], level: int,
+                index_dir: Path) -> Task:
     """Build one variant: real docker world + gated reward once onboarded,
     placeholder on the mock backend before that."""
     if not _is_onboarded(entry):
@@ -233,20 +244,21 @@ def _build_task(entry: Mapping[str, Any], level: int) -> Task:
         ),
         reward=make_reward(fuzzer=entry["fuzzer"],
                            patch_path="/src/patch.diff"),
-        world=_build_world(entry),
+        world=_build_world(entry, index_dir),
         backend="docker",
     )
 
 
-def register_entry(entry: Mapping[str, Any]) -> list[str]:
+def register_entry(entry: Mapping[str, Any],
+                   index_dir: Path = INDEX_PATH.parent) -> list[str]:
     """Register one @task factory per onboarded level of ``entry``."""
     names = []
     for level in entry["levels"]:
         name = variant_name(entry, level)
 
         @task(name=name)
-        def _factory(entry=entry, level=level) -> Task:
-            return _build_task(entry, level)
+        def _factory(entry=entry, level=level, index_dir=index_dir) -> Task:
+            return _build_task(entry, level, index_dir)
 
         names.append(name)
     return names
@@ -255,9 +267,12 @@ def register_entry(entry: Mapping[str, Any]) -> list[str]:
 def register_index(path: str | Path = INDEX_PATH) -> list[str]:
     """Load ``path`` and register every variant it onboard; returns task names."""
     names: list[str] = []
+    index_dir = Path(path).resolve().parent
     for entry in load_index(path):
-        names.extend(register_entry(entry))
+        names.extend(register_entry(entry, index_dir))
     return names
+
+
 
 
 register_index()  # discover() imports this file: registration happens at import

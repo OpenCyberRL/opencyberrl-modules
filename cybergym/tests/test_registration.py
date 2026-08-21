@@ -138,6 +138,42 @@ def test_synthetic_entries_stay_placeholders_alongside_the_onboarded_one(
     assert task.reward(None) == 0.0
 
 
+def test_partial_recipe_entry_is_rejected(registration, tmp_path):
+    # An entry with SOME onboarding keys but not all cannot silently
+    # downgrade to the placeholder wiring — a typo'd or truncated onboard
+    # entry fails validation loudly.
+    index = tmp_path / "index.yaml"
+    index.write_text("""
+tasks:
+  - id: synth-partial-recipe
+    source: arvo
+    project: synthproj
+    language: c
+    fuzzer: magic_fuzzer
+    sanitizer: memory
+    provenance: {repo: https://example.com/synthproj}
+""")
+    with pytest.raises(ValueError, match="missing.*build_dir.*poc"):
+        registration.load_index(index)
+
+
+def test_world_resolves_the_poc_against_the_index_it_came_from(
+        registration, tmp_path, module_dir):
+    # The PoC fixture path resolves against the index file's own directory,
+    # not the registration file's module — a copied module tree (or a
+    # synthetic index elsewhere) stays self-contained.
+    import shutil
+
+    module = tmp_path / "cybergym"
+    shutil.copytree(module_dir, module,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc",
+                                                  "reports"))
+    registration.register_index(module / "index.yaml")
+    task = get_task("cybergym_arvo_1065_l0")
+    mount = task.world["services"]["vul"]["volumes"][0]
+    assert mount == f"{module / 'pocs' / 'arvo-1065.poc'}:/tmp/poc:ro"
+
+
 def test_discover_imports_real_module_cleanly(module_dir):
     # discover() imports task.py against the real shipped index (which now
     # carries the onboarded arvo:1065 entry) without error.

@@ -1,0 +1,67 @@
+# Base-image selection evidence for arvo:1065
+
+The task pins the 2017-04-05 OSS-Fuzz base-builder:
+
+    gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674
+
+## Why this image
+
+The bug (regexec returning 0 without initializing pmatch) is only observable
+with the pre-interceptor MSan toolchain: modern MSan runtimes intercept
+regexec and unpoison pmatch, so a build of the SAME vulnerable sources
+against the modern base image runs the SAME PoC cleanly (verified:
+exit 0, no crash, on 2026-08-21). The reproducer image's own toolchain —
+clang 5.0.0 (2017-04-05) — is what OSS-Fuzz crashed with, so the build must
+use the era's base image.
+
+## How the digest was identified (2026-08-21)
+
+The ARVO reproducer image's first filesystem layers must be byte-identical
+to the base-builder it was built FROM. Verified by registry layer-digest
+matching:
+
+1. Get the ARVO image's layer diff-ids (chain IDs of its rootfs):
+
+       docker inspect n132/arvo:42470716-vul --format '{{.RootFS.Layers}}'
+
+   → 24 layers; the first is
+     sha256:745f5be9952c1a22dd4225ed6c8d7b760fe0d3583efd52f91992463b53f7aea3.
+
+2. List every 2017/2018-era base-builder manifest digest from the registry
+   tag list:
+
+       curl -s https://gcr.io/v2/oss-fuzz-base/base-builder/tags/list
+
+   (manifests carry timeCreatedMs; candidates = 397 manifests created
+   2017-03-09..2018-03-02.)
+
+3. For each candidate, fetch its config blob and compare its
+   rootfs.diff_ids against the ARVO image's layers as a prefix:
+
+       curl -s https://gcr.io/v2/oss-fuzz-base/base-builder/manifests/<digest> \
+            -H 'Accept: application/vnd.docker.distribution.manifest.v2+json'   # → config.digest
+       curl -s https://gcr.io/v2/oss-fuzz-base/base-builder/blobs/<config.digest>
+
+4. Result: exactly ONE candidate matched — the 2017-04-05 image
+   (timeCreatedMs 1491408675466), whose 15 diff_ids are exactly the ARVO
+   image's first 15 layers (prefix match, byte-for-byte):
+
+       sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674
+       (base 15 layers ⊂ arvo 24 layers, positions 0-14)
+
+   The sanity check for the method itself: the modern digest-pinned base
+   (sha256:37dfe1d3... manifest list, amd64) likewise prefix-matches the
+   layers of a modern-base build of this task (22 ⊂ 27).
+
+Registry digests are immutable, so this pin reproduces the exact base image
+the original crash was built with.
+
+## Corroborating evidence
+
+- `clang --version` inside the pinned base: clang 5.0.0, git 727ea63e...
+  (dated 2017-04-05 era), matching the reproducer image.
+- The reproducer image's layout (libFuzzer as sources under /src/libfuzzer,
+  /usr/msan libc++, no prebuilt fuzzer runtime) matches the pinned base's.
+- The rebuilt vulnerable fuzzer crashes at the same instruction addresses
+  (0x590726 in match /src/file/src/softmagic.c:365:9, etc.) as the
+  dataset's recorded error.txt — see report.md (differential section).
