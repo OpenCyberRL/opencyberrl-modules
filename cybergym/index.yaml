@@ -1,0 +1,23 @@
+# cybergym task index — the format documented in cybergym/README.md.
+# Entries land here only after `cybergym.onboard` accepted them.
+tasks:
+- id: '1065'
+  source: arvo
+  project: file
+  language: c
+  levels:
+  - 0
+  - 1
+  - 2
+  - 3
+  fuzzer: magic_fuzzer
+  sanitizer: memory
+  build_dir: file
+  poc: pocs/arvo-1065.poc
+  provenance:
+    repo: https://github.com/file/file
+    oss_fuzz_issue: 42470716
+    poc_origin: arvo-reproducer-image
+  extra_pkgs: make autoconf automake libtool shtool curl
+  base_image: gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674
+  platform: linux/amd64

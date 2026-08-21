@@ -1,0 +1,441 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.vul
+#1 transferring dockerfile: 3.63kB done
+#1 WARN: RedundantTargetPlatform: Setting platform to predefined ${TARGETPLATFORM:-linux/amd64} in FROM is redundant as this is the default behavior (line 46)
+#1 DONE 0.0s
+
+#2 [internal] load metadata for gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674
+#2 DONE 0.3s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/6] FROM gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674
+#4 resolve gcr.io/oss-fuzz-base/base-builder@sha256:2d248061923e2107d2e56a8a90ddfe423b1a99cb020ffa745f04c4c5e6d1a674 done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 4.90kB done
+#5 DONE 0.0s
+
+#6 [2/6] RUN if [[ -n "make autoconf automake libtool shtool curl" ]]; then         apt-get update && apt-get install -y make autoconf automake libtool shtool curl && rm -rf /var/lib/apt/lists/*;     fi
+#6 CACHED
+
+#7 [3/6] RUN set -o pipefail  && mkdir -p /src  && curl -fsSL "https://huggingface.co/datasets/sunblaze-ucb/cybergym/resolve/main/data/arvo/1065/repo-vul.tar.gz" | tar -xz --strip-components=1 -C /src
+#7 CACHED
+
+#8 [4/6] WORKDIR /src/file
+#8 CACHED
+
+#9 [5/6] COPY build-step.sh /usr/local/bin/build-step.sh
+#9 DONE 0.0s
+
+#10 [6/6] RUN bash /usr/local/bin/build-step.sh
+#10 23.46 ar: creating /usr/lib/libFuzzingEngine.a
+#10 23.65 + autoreconf -i
+#10 28.63 libtoolize: putting auxiliary files in '.'.
+#10 28.63 libtoolize: copying file './ltmain.sh'
+#10 28.95 libtoolize: putting macros in AC_CONFIG_MACRO_DIRS, 'm4'.
+#10 28.95 libtoolize: copying file 'm4/libtool.m4'
+#10 29.27 libtoolize: copying file 'm4/ltoptions.m4'
+#10 29.52 libtoolize: copying file 'm4/ltsugar.m4'
+#10 29.70 libtoolize: copying file 'm4/ltversion.m4'
+#10 29.88 libtoolize: copying file 'm4/lt~obsolete.m4'
+#10 34.37 configure.ac:76: installing './compile'
+#10 34.38 configure.ac:57: installing './config.guess'
+#10 34.39 configure.ac:57: installing './config.sub'
+#10 34.40 configure.ac:3: installing './install-sh'
+#10 34.41 configure.ac:3: installing './missing'
+#10 34.50 src/Makefile.am: installing './depcomp'
+#10 34.54 + ./configure --enable-static
+#10 35.23 checking for a BSD-compatible install... /usr/bin/install -c
+#10 35.29 checking whether build environment is sane... yes
+#10 35.35 checking for a thread-safe mkdir -p... /bin/mkdir -p
+#10 35.36 checking for gawk... no
+#10 35.37 checking for mawk... mawk
+#10 35.37 checking whether make sets $(MAKE)... yes
+#10 35.45 checking whether make supports nested variables... yes
+#10 35.51 checking whether make supports nested variables... (cached) yes
+#10 35.51 checking for builtin ELF support... yes
+#10 35.51 checking for ELF core file support... yes
+#10 35.51 checking for zlib support... 
+#10 35.51 checking for file formats in man section 5... no
+#10 35.58 checking build system type... x86_64-pc-linux-gnu
+#10 35.85 checking host system type... x86_64-pc-linux-gnu
+#10 35.86 checking for style of include used by make... GNU
+#10 35.89 checking for gcc... clang
+#10 36.12 checking whether the C compiler works... yes
+#10 36.51 checking for C compiler default output file name... a.out
+#10 36.52 checking for suffix of executables... 
+#10 36.91 checking whether we are cross compiling... no
+#10 37.43 checking for suffix of object files... o
+#10 37.73 checking whether we are using the GNU C compiler... yes
+#10 38.02 checking whether clang accepts -g... yes
+#10 38.21 checking for clang option to accept ISO C89... none needed
+#10 38.68 checking whether clang understands -c and -o together... yes
+#10 39.02 checking dependency style of clang... gcc3
+#10 39.35 checking for clang option to accept ISO C99... none needed
+#10 39.93 checking for clang option to accept ISO Standard C... (cached) none needed
+#10 39.93 checking how to run the C preprocessor... clang -E
+#10 40.44 checking for grep that handles long lines and -e... /bin/grep
+#10 40.45 checking for egrep... /bin/grep -E
+#10 40.46 checking for ANSI C header files... yes
+#10 41.65 checking for sys/types.h... yes
+#10 41.98 checking for sys/stat.h... yes
+#10 42.30 checking for stdlib.h... yes
+#10 42.62 checking for string.h... yes
+#10 42.94 checking for memory.h... yes
+#10 43.27 checking for strings.h... yes
+#10 43.60 checking for inttypes.h... yes
+#10 43.93 checking for stdint.h... yes
+#10 44.26 checking for unistd.h... yes
+#10 44.57 checking minix/config.h usability... no
+#10 44.80 checking minix/config.h presence... no
+#10 44.95 checking for minix/config.h... no
+#10 44.95 checking whether it is safe to define __EXTENSIONS__... yes
+#10 45.30 checking whether byte ordering is bigendian... no
+#10 46.02 checking whether ln -s works... yes
+#10 46.02 checking how to print strings... printf
+#10 46.13 checking for a sed that does not truncate output... /bin/sed
+#10 46.16 checking for fgrep... /bin/grep -F
+#10 46.17 checking for ld used by clang... /usr/bin/ld
+#10 46.23 checking if the linker (/usr/bin/ld) is GNU ld... yes
+#10 46.24 checking for BSD- or MS-compatible name lister (nm)... /usr/bin/nm -B
+#10 46.26 checking the name lister (/usr/bin/nm -B) interface... BSD nm
+#10 46.52 checking the maximum length of command line arguments... 1572864
+#10 46.56 checking how to convert x86_64-pc-linux-gnu file names to x86_64-pc-linux-gnu format... func_convert_file_noop
+#10 46.56 checking how to convert x86_64-pc-linux-gnu file names to toolchain format... func_convert_file_noop
+#10 46.56 checking for /usr/bin/ld option to reload object files... -r
+#10 46.56 checking for objdump... objdump
+#10 46.56 checking how to recognize dependent libraries... pass_all
+#10 46.56 checking for dlltool... no
+#10 46.56 checking how to associate runtime and link libraries... printf %s\n
+#10 46.56 checking for ar... ar
+#10 46.56 checking for archiver @FILE support... @
+#10 46.90 checking for strip... strip
+#10 46.90 checking for ranlib... ranlib
+#10 46.90 checking command to parse /usr/bin/nm -B output from clang object... ok
+#10 47.71 checking for sysroot... no
+#10 47.71 checking for a working dd... /bin/dd
+#10 47.74 checking how to truncate binary pipes... /bin/dd bs=4096 count=1
+#10 48.00 checking for mt... no
+#10 48.00 checking if : is a manifest tool... no
+#10 48.02 checking for dlfcn.h... yes
+#10 48.32 checking for objdir... .libs
+#10 49.00 checking if clang supports -fno-rtti -fno-exceptions... yes
+#10 49.26 checking for clang option to produce PIC... -fPIC -DPIC
+#10 49.26 checking if clang PIC flag -fPIC -DPIC works... yes
+#10 49.53 checking if clang static flag -static works... yes
+#10 49.94 checking if clang supports -c -o file.o... yes
+#10 50.28 checking if clang supports -c -o file.o... (cached) yes
+#10 50.28 checking whether the clang linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes
+#10 50.37 checking whether -lc should be explicitly linked in... no
+#10 50.70 checking dynamic linker characteristics... GNU/Linux ld.so
+#10 51.31 checking how to hardcode library paths into programs... immediate
+#10 51.31 checking whether stripping libraries is possible... yes
+#10 51.33 checking if libtool supports shared libraries... yes
+#10 51.33 checking whether to build shared libraries... yes
+#10 51.33 checking whether to build static libraries... yes
+#10 51.33 ./configure: line 13007: gl_VISIBILITY: command not found
+#10 51.33 checking for ANSI C header files... (cached) yes
+#10 51.33 checking whether sys/types.h defines makedev... yes
+#10 51.84 checking for sys/wait.h that is POSIX.1 compatible... yes
+#10 52.27 checking for stdint.h... (cached) yes
+#10 52.31 checking fcntl.h usability... yes
+#10 52.62 checking fcntl.h presence... yes
+#10 52.74 checking for fcntl.h... yes
+#10 52.78 checking locale.h usability... yes
+#10 53.09 checking locale.h presence... yes
+#10 53.21 checking for locale.h... yes
+#10 53.25 checking for stdint.h... (cached) yes
+#10 53.29 checking for inttypes.h... (cached) yes
+#10 53.33 checking for unistd.h... (cached) yes
+#10 53.37 checking stddef.h usability... yes
+#10 53.69 checking stddef.h presence... yes
+#10 53.80 checking for stddef.h... yes
+#10 53.84 checking utime.h usability... yes
+#10 54.15 checking utime.h presence... yes
+#10 54.27 checking for utime.h... yes
+#10 54.31 checking wchar.h usability... yes
+#10 54.62 checking wchar.h presence... yes
+#10 54.74 checking for wchar.h... yes
+#10 54.78 checking wctype.h usability... yes
+#10 55.09 checking wctype.h presence... yes
+#10 55.21 checking for wctype.h... yes
+#10 55.25 checking limits.h usability... yes
+#10 55.57 checking limits.h presence... yes
+#10 55.69 checking for limits.h... yes
+#10 55.73 checking getopt.h usability... yes
+#10 56.04 checking getopt.h presence... yes
+#10 56.16 checking for getopt.h... yes
+#10 56.20 checking err.h usability... yes
+#10 56.51 checking err.h presence... yes
+#10 56.62 checking for err.h... yes
+#10 56.66 checking xlocale.h usability... yes
+#10 56.97 checking xlocale.h presence... yes
+#10 57.09 checking for xlocale.h... yes
+#10 57.13 checking signal.h usability... yes
+#10 57.44 checking signal.h presence... yes
+#10 57.56 checking for signal.h... yes
+#10 57.59 checking sys/mman.h usability... yes
+#10 57.92 checking sys/mman.h presence... yes
+#10 58.19 checking for sys/mman.h... yes
+#10 58.30 checking for sys/stat.h... (cached) yes
+#10 58.38 checking for sys/types.h... (cached) yes
+#10 58.46 checking sys/utime.h usability... no
+#10 58.92 checking sys/utime.h presence... no
+#10 59.16 checking for sys/utime.h... no
+#10 59.19 checking sys/time.h usability... yes
+#10 59.64 checking sys/time.h presence... yes
+#10 59.81 checking for sys/time.h... yes
+#10 59.85 checking zlib.h usability... no
+#10 60.19 checking zlib.h presence... no
+#10 60.41 checking for zlib.h... no
+#10 60.41 checking for sig_t... yes
+#10 61.07 checking for an ANSI C-conforming const... yes
+#10 61.44 checking for off_t... yes
+#10 62.07 checking for size_t... yes
+#10 62.70 checking for struct stat.st_rdev... yes
+#10 63.09 checking for struct tm.tm_gmtoff... no
+#10 63.58 checking whether struct tm is in sys/time.h or time.h... time.h
+#10 63.92 checking for struct tm.tm_zone... yes
+#10 64.27 checking for tm_zone in struct tm... yes
+#10 64.67 checking whether tzname is declared... yes
+#10 65.01 checking for tzname... yes
+#10 65.50 checking for tm_isdst in struct tm... yes
+#10 65.90 checking whether daylight is declared... yes
+#10 66.24 checking for daylight... yes
+#10 66.74 checking for special C compiler options needed for large files... no
+#10 66.74 checking for _FILE_OFFSET_BITS value needed for large files... no
+#10 67.08 checking for _LARGEFILE_SOURCE value needed for large files... no
+#10 67.61 checking for mbstate_t... yes
+#10 67.98 checking for struct option in getopt... yes
+#10 68.35 checking for pid_t... yes
+#10 68.95 checking for uint8_t... yes
+#10 69.32 checking for uint16_t... yes
+#10 69.68 checking for uint32_t... yes
+#10 70.05 checking for int32_t... yes
+#10 70.66 checking for uint64_t... yes
+#10 71.03 checking for int64_t... yes
+#10 71.63 checking for intptr_t... yes
+#10 72.25 checking for uintptr_t... yes
+#10 72.88 checking for stdlib.h... (cached) yes
+#10 72.92 checking for unistd.h... (cached) yes
+#10 72.96 checking for sys/param.h... yes
+#10 73.29 checking for getpagesize... yes
+#10 73.75 checking for working mmap... yes
+#10 74.43 checking vfork.h usability... no
+#10 74.67 checking vfork.h presence... no
+#10 74.83 checking for vfork.h... no
+#10 74.84 checking for fork... yes
+#10 75.34 checking for vfork... yes
+#10 75.86 checking for working fork... yes
+#10 76.38 checking for working vfork... (cached) yes
+#10 76.38 checking whether mbrtowc and mbstate_t are properly declared... yes
+#10 76.90 checking for gcc compiler warnings... yes
+#10 76.91 checking for strerror... yes
+#10 77.44 checking for strndup... yes
+#10 77.98 checking for strtoul... yes
+#10 78.47 checking for mkstemp... yes
+#10 78.97 checking for mkostemp... yes
+#10 79.45 checking for utimes... yes
+#10 79.92 checking for utime... yes
+#10 80.47 checking for wcwidth... yes
+#10 80.99 checking for strtof... yes
+#10 81.46 checking for newlocale... yes
+#10 81.94 checking for uselocale... yes
+#10 82.43 checking for freelocale... yes
+#10 82.93 checking for setlocale... yes
+#10 83.41 checking for getopt_long... yes
+#10 83.86 checking for asprintf... yes
+#10 84.34 checking for vasprintf... yes
+#10 84.82 checking for strlcpy... no
+#10 85.31 checking for strlcat... no
+#10 85.80 checking for getline... yes
+#10 86.25 checking for ctime_r... yes
+#10 86.69 checking for asctime_r... yes
+#10 87.12 checking for localtime_r... yes
+#10 87.56 checking for gmtime_r... yes
+#10 88.01 checking for pread... yes
+#10 88.45 checking for strcasestr... yes
+#10 88.89 checking for fmtcheck... no
+#10 89.37 checking for dprintf... yes
+#10 89.82 checking for gzopen in -lz... no
+#10 90.35 checking that generated files are newer than configure... done
+#10 90.35 configure: creating ./config.status
+#10 92.82 config.status: creating Makefile
+#10 92.90 config.status: creating src/Makefile
+#10 93.00 config.status: creating magic/Makefile
+#10 93.11 config.status: creating tests/Makefile
+#10 93.21 config.status: creating doc/Makefile
+#10 93.31 config.status: creating python/Makefile
+#10 93.41 config.status: creating config.h
+#10 93.47 config.status: executing depfiles commands
+#10 94.27 config.status: executing libtool commands
+#10 94.42 + make V=1 all
+#10 94.47 make  all-recursive
+#10 94.50 make[1]: Entering directory '/src/file'
+#10 94.53 Making all in src
+#10 94.55 make[2]: Entering directory '/src/file/src'
+#10 94.55 sed -e "s/X.YY/$(echo 5.30 | tr -d .)/" < ../src/magic.h.in > magic.h
+#10 94.59 make  all-am
+#10 94.62 make[3]: Entering directory '/src/file/src'
+#10 94.62 depbase=`echo magic.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 94.62 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT magic.lo -MD -MP -MF $depbase.Tpo -c -o magic.lo magic.c &&\
+#10 94.62 mv -f $depbase.Tpo $depbase.Plo
+#10 94.96 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT magic.lo -MD -MP -MF .deps/magic.Tpo -c magic.c  -fPIC -DPIC -o .libs/magic.o
+#10 95.55 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT magic.lo -MD -MP -MF .deps/magic.Tpo -c magic.c  -fPIC -DPIC -o magic.o >/dev/null 2>&1
+#10 96.15 depbase=`echo apprentice.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 96.15 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT apprentice.lo -MD -MP -MF $depbase.Tpo -c -o apprentice.lo apprentice.c &&\
+#10 96.15 mv -f $depbase.Tpo $depbase.Plo
+#10 96.47 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT apprentice.lo -MD -MP -MF .deps/apprentice.Tpo -c apprentice.c  -fPIC -DPIC -o .libs/apprentice.o
+#10 97.63 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT apprentice.lo -MD -MP -MF .deps/apprentice.Tpo -c apprentice.c  -fPIC -DPIC -o apprentice.o >/dev/null 2>&1
+#10 98.81 depbase=`echo softmagic.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 98.81 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT softmagic.lo -MD -MP -MF $depbase.Tpo -c -o softmagic.lo softmagic.c &&\
+#10 98.81 mv -f $depbase.Tpo $depbase.Plo
+#10 99.13 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT softmagic.lo -MD -MP -MF .deps/softmagic.Tpo -c softmagic.c  -fPIC -DPIC -o .libs/softmagic.o
+#10 100.2 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT softmagic.lo -MD -MP -MF .deps/softmagic.Tpo -c softmagic.c  -fPIC -DPIC -o softmagic.o >/dev/null 2>&1
+#10 101.2 depbase=`echo ascmagic.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 101.2 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT ascmagic.lo -MD -MP -MF $depbase.Tpo -c -o ascmagic.lo ascmagic.c &&\
+#10 101.2 mv -f $depbase.Tpo $depbase.Plo
+#10 101.5 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT ascmagic.lo -MD -MP -MF .deps/ascmagic.Tpo -c ascmagic.c  -fPIC -DPIC -o .libs/ascmagic.o
+#10 102.2 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT ascmagic.lo -MD -MP -MF .deps/ascmagic.Tpo -c ascmagic.c  -fPIC -DPIC -o ascmagic.o >/dev/null 2>&1
+#10 102.8 depbase=`echo encoding.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 102.8 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT encoding.lo -MD -MP -MF $depbase.Tpo -c -o encoding.lo encoding.c &&\
+#10 102.8 mv -f $depbase.Tpo $depbase.Plo
+#10 103.1 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT encoding.lo -MD -MP -MF .deps/encoding.Tpo -c encoding.c  -fPIC -DPIC -o .libs/encoding.o
+#10 103.7 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT encoding.lo -MD -MP -MF .deps/encoding.Tpo -c encoding.c  -fPIC -DPIC -o encoding.o >/dev/null 2>&1
+#10 104.4 depbase=`echo compress.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 104.4 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT compress.lo -MD -MP -MF $depbase.Tpo -c -o compress.lo compress.c &&\
+#10 104.4 mv -f $depbase.Tpo $depbase.Plo
+#10 104.7 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT compress.lo -MD -MP -MF .deps/compress.Tpo -c compress.c  -fPIC -DPIC -o .libs/compress.o
+#10 105.3 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT compress.lo -MD -MP -MF .deps/compress.Tpo -c compress.c  -fPIC -DPIC -o compress.o >/dev/null 2>&1
+#10 106.0 depbase=`echo is_tar.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 106.0 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT is_tar.lo -MD -MP -MF $depbase.Tpo -c -o is_tar.lo is_tar.c &&\
+#10 106.0 mv -f $depbase.Tpo $depbase.Plo
+#10 106.3 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT is_tar.lo -MD -MP -MF .deps/is_tar.Tpo -c is_tar.c  -fPIC -DPIC -o .libs/is_tar.o
+#10 106.9 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT is_tar.lo -MD -MP -MF .deps/is_tar.Tpo -c is_tar.c  -fPIC -DPIC -o is_tar.o >/dev/null 2>&1
+#10 107.4 depbase=`echo readelf.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 107.4 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT readelf.lo -MD -MP -MF $depbase.Tpo -c -o readelf.lo readelf.c &&\
+#10 107.4 mv -f $depbase.Tpo $depbase.Plo
+#10 107.8 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT readelf.lo -MD -MP -MF .deps/readelf.Tpo -c readelf.c  -fPIC -DPIC -o .libs/readelf.o
+#10 108.7 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT readelf.lo -MD -MP -MF .deps/readelf.Tpo -c readelf.c  -fPIC -DPIC -o readelf.o >/dev/null 2>&1
+#10 109.6 depbase=`echo print.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 109.6 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT print.lo -MD -MP -MF $depbase.Tpo -c -o print.lo print.c &&\
+#10 109.6 mv -f $depbase.Tpo $depbase.Plo
+#10 110.0 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT print.lo -MD -MP -MF .deps/print.Tpo -c print.c  -fPIC -DPIC -o .libs/print.o
+#10 110.5 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT print.lo -MD -MP -MF .deps/print.Tpo -c print.c  -fPIC -DPIC -o print.o >/dev/null 2>&1
+#10 111.1 depbase=`echo fsmagic.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 111.1 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT fsmagic.lo -MD -MP -MF $depbase.Tpo -c -o fsmagic.lo fsmagic.c &&\
+#10 111.1 mv -f $depbase.Tpo $depbase.Plo
+#10 111.4 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT fsmagic.lo -MD -MP -MF .deps/fsmagic.Tpo -c fsmagic.c  -fPIC -DPIC -o .libs/fsmagic.o
+#10 112.0 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT fsmagic.lo -MD -MP -MF .deps/fsmagic.Tpo -c fsmagic.c  -fPIC -DPIC -o fsmagic.o >/dev/null 2>&1
+#10 112.6 depbase=`echo funcs.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 112.6 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT funcs.lo -MD -MP -MF $depbase.Tpo -c -o funcs.lo funcs.c &&\
+#10 112.6 mv -f $depbase.Tpo $depbase.Plo
+#10 112.9 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT funcs.lo -MD -MP -MF .deps/funcs.Tpo -c funcs.c  -fPIC -DPIC -o .libs/funcs.o
+#10 113.6 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT funcs.lo -MD -MP -MF .deps/funcs.Tpo -c funcs.c  -fPIC -DPIC -o funcs.o >/dev/null 2>&1
+#10 114.3 depbase=`echo apptype.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 114.3 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT apptype.lo -MD -MP -MF $depbase.Tpo -c -o apptype.lo apptype.c &&\
+#10 114.3 mv -f $depbase.Tpo $depbase.Plo
+#10 114.6 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT apptype.lo -MD -MP -MF .deps/apptype.Tpo -c apptype.c  -fPIC -DPIC -o .libs/apptype.o
+#10 114.9 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT apptype.lo -MD -MP -MF .deps/apptype.Tpo -c apptype.c  -fPIC -DPIC -o apptype.o >/dev/null 2>&1
+#10 115.2 depbase=`echo der.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 115.2 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT der.lo -MD -MP -MF $depbase.Tpo -c -o der.lo der.c &&\
+#10 115.2 mv -f $depbase.Tpo $depbase.Plo
+#10 115.5 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT der.lo -MD -MP -MF .deps/der.Tpo -c der.c  -fPIC -DPIC -o .libs/der.o
+#10 116.1 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT der.lo -MD -MP -MF .deps/der.Tpo -c der.c  -fPIC -DPIC -o der.o >/dev/null 2>&1
+#10 116.7 depbase=`echo cdf.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 116.7 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT cdf.lo -MD -MP -MF $depbase.Tpo -c -o cdf.lo cdf.c &&\
+#10 116.7 mv -f $depbase.Tpo $depbase.Plo
+#10 117.0 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT cdf.lo -MD -MP -MF .deps/cdf.Tpo -c cdf.c  -fPIC -DPIC -o .libs/cdf.o
+#10 117.9 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT cdf.lo -MD -MP -MF .deps/cdf.Tpo -c cdf.c  -fPIC -DPIC -o cdf.o >/dev/null 2>&1
+#10 118.8 depbase=`echo cdf_time.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 118.8 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT cdf_time.lo -MD -MP -MF $depbase.Tpo -c -o cdf_time.lo cdf_time.c &&\
+#10 118.8 mv -f $depbase.Tpo $depbase.Plo
+#10 119.1 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT cdf_time.lo -MD -MP -MF .deps/cdf_time.Tpo -c cdf_time.c  -fPIC -DPIC -o .libs/cdf_time.o
+#10 119.7 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT cdf_time.lo -MD -MP -MF .deps/cdf_time.Tpo -c cdf_time.c  -fPIC -DPIC -o cdf_time.o >/dev/null 2>&1
+#10 120.2 depbase=`echo readcdf.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 120.2 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT readcdf.lo -MD -MP -MF $depbase.Tpo -c -o readcdf.lo readcdf.c &&\
+#10 120.2 mv -f $depbase.Tpo $depbase.Plo
+#10 120.6 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT readcdf.lo -MD -MP -MF .deps/readcdf.Tpo -c readcdf.c  -fPIC -DPIC -o .libs/readcdf.o
+#10 121.2 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT readcdf.lo -MD -MP -MF .deps/readcdf.Tpo -c readcdf.c  -fPIC -DPIC -o readcdf.o >/dev/null 2>&1
+#10 121.9 depbase=`echo strlcpy.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 121.9 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT strlcpy.lo -MD -MP -MF $depbase.Tpo -c -o strlcpy.lo strlcpy.c &&\
+#10 121.9 mv -f $depbase.Tpo $depbase.Plo
+#10 122.3 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT strlcpy.lo -MD -MP -MF .deps/strlcpy.Tpo -c strlcpy.c  -fPIC -DPIC -o .libs/strlcpy.o
+#10 122.7 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT strlcpy.lo -MD -MP -MF .deps/strlcpy.Tpo -c strlcpy.c  -fPIC -DPIC -o strlcpy.o >/dev/null 2>&1
+#10 123.2 depbase=`echo strlcat.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 123.2 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT strlcat.lo -MD -MP -MF $depbase.Tpo -c -o strlcat.lo strlcat.c &&\
+#10 123.2 mv -f $depbase.Tpo $depbase.Plo
+#10 123.6 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT strlcat.lo -MD -MP -MF .deps/strlcat.Tpo -c strlcat.c  -fPIC -DPIC -o .libs/strlcat.o
+#10 124.1 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT strlcat.lo -MD -MP -MF .deps/strlcat.Tpo -c strlcat.c  -fPIC -DPIC -o strlcat.o >/dev/null 2>&1
+#10 124.6 depbase=`echo fmtcheck.lo | sed 's|[^/]*$|.deps/&|;s|\.lo$||'`;\
+#10 124.6 /bin/bash ../libtool  --tag=CC   --mode=compile clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT fmtcheck.lo -MD -MP -MF $depbase.Tpo -c -o fmtcheck.lo fmtcheck.c &&\
+#10 124.6 mv -f $depbase.Tpo $depbase.Plo
+#10 124.9 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT fmtcheck.lo -MD -MP -MF .deps/fmtcheck.Tpo -c fmtcheck.c  -fPIC -DPIC -o .libs/fmtcheck.o
+#10 125.4 libtool: compile:  clang -DHAVE_CONFIG_H -I. -I.. -DMAGIC=\"/usr/local/share/misc/magic\" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT fmtcheck.lo -MD -MP -MF .deps/fmtcheck.Tpo -c fmtcheck.c  -fPIC -DPIC -o fmtcheck.o >/dev/null 2>&1
+#10 126.0 /bin/bash ../libtool  --tag=CC   --mode=link clang  -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -no-undefined -version-info 1:0:0  -o libmagic.la -rpath /usr/local/lib magic.lo apprentice.lo softmagic.lo ascmagic.lo encoding.lo compress.lo is_tar.lo readelf.lo print.lo fsmagic.lo funcs.lo apptype.lo der.lo cdf.lo cdf_time.lo readcdf.lo strlcpy.lo strlcat.lo fmtcheck.lo  
+#10 126.2 libtool: link: clang -shared  -fPIC -DPIC  .libs/magic.o .libs/apprentice.o .libs/softmagic.o .libs/ascmagic.o .libs/encoding.o .libs/compress.o .libs/is_tar.o .libs/readelf.o .libs/print.o .libs/fsmagic.o .libs/funcs.o .libs/apptype.o .libs/der.o .libs/cdf.o .libs/cdf_time.o .libs/readcdf.o .libs/strlcpy.o .libs/strlcat.o .libs/fmtcheck.o    -O1 -gline-tables-only -fsanitize=memory   -Wl,-soname -Wl,libmagic.so.1 -o .libs/libmagic.so.1.0.0
+#10 126.3 libtool: link: (cd ".libs" && rm -f "libmagic.so.1" && ln -s "libmagic.so.1.0.0" "libmagic.so.1")
+#10 126.4 libtool: link: (cd ".libs" && rm -f "libmagic.so" && ln -s "libmagic.so.1.0.0" "libmagic.so")
+#10 126.4 libtool: link: ar cru .libs/libmagic.a  magic.o apprentice.o softmagic.o ascmagic.o encoding.o compress.o is_tar.o readelf.o print.o fsmagic.o funcs.o apptype.o der.o cdf.o cdf_time.o readcdf.o strlcpy.o strlcat.o fmtcheck.o
+#10 126.4 ar: `u' modifier ignored since `D' is the default (see `U')
+#10 126.4 libtool: link: ranlib .libs/libmagic.a
+#10 126.5 libtool: link: ( cd ".libs" && rm -f "libmagic.la" && ln -s "../libmagic.la" "libmagic.la" )
+#10 126.5 depbase=`echo file.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+#10 126.5 clang -DHAVE_CONFIG_H -I. -I..  -DMAGIC='"/usr/local/share/misc/magic"'   -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -MT file.o -MD -MP -MF $depbase.Tpo -c -o file.o file.c &&\
+#10 126.5 mv -f $depbase.Tpo $depbase.Po
+#10 127.2 /bin/bash ../libtool  --tag=CC   --mode=link clang  -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith        -Wmissing-declarations -Wredundant-decls -Wnested-externs        -Wsign-compare -Wreturn-type -Wswitch -Wshadow        -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp   -o file file.o libmagic.la 
+#10 127.4 libtool: link: clang -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wsign-compare -Wreturn-type -Wswitch -Wshadow -Wcast-qual -Wwrite-strings -Wextra -Wunused-parameter -Wformat=2 -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -o .libs/file file.o  ./.libs/libmagic.so
+#10 127.6 make[3]: Leaving directory '/src/file/src'
+#10 127.6 make[2]: Leaving directory '/src/file/src'
+#10 127.6 Making all in magic
+#10 127.7 make[2]: Entering directory '/src/file/magic'
+#10 127.7 ../src/file -C -m magic
+#10 128.1 make[2]: Leaving directory '/src/file/magic'
+#10 128.1 Making all in tests
+#10 128.2 make[2]: Entering directory '/src/file/tests'
+#10 128.2 make[2]: Nothing to be done for 'all'.
+#10 128.2 make[2]: Leaving directory '/src/file/tests'
+#10 128.2 Making all in doc
+#10 128.2 make[2]: Entering directory '/src/file/doc'
+#10 128.2 sed -e s@__CSECTION__@1@g \
+#10 128.2     -e s@__FSECTION__@4@g \
+#10 128.2     -e s@__VERSION__@5.30@g \
+#10 128.2     -e s@__MAGIC__@/usr/local/share/misc/magic@g ./file.man > file.1
+#10 128.2 sed -e s@__CSECTION__@1@g \
+#10 128.2     -e s@__FSECTION__@4@g \
+#10 128.2     -e s@__VERSION__@5.30@g \
+#10 128.2     -e s@__MAGIC__@/usr/local/share/misc/magic@g ./magic.man > magic.4
+#10 128.3 sed -e s@__CSECTION__@1@g \
+#10 128.3     -e s@__FSECTION__@4@g \
+#10 128.3     -e s@__VERSION__@5.30@g \
+#10 128.3     -e s@__MAGIC__@/usr/local/share/misc/magic@g ./libmagic.man > libmagic.3
+#10 128.3 make[2]: Leaving directory '/src/file/doc'
+#10 128.3 Making all in python
+#10 128.3 make[2]: Entering directory '/src/file/python'
+#10 128.3 make[2]: Nothing to be done for 'all'.
+#10 128.3 make[2]: Leaving directory '/src/file/python'
+#10 128.4 make[2]: Entering directory '/src/file'
+#10 128.4 make[2]: Leaving directory '/src/file'
+#10 128.4 make[1]: Leaving directory '/src/file'
+#10 128.4 + clang++ -O1 -fno-omit-frame-pointer -gline-tables-only -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize=memory -fsanitize-memory-track-origins -fsanitize-coverage=trace-pc-guard,trace-cmp -stdlib=libc++ -std=c++11 -Isrc/ /src/magic_fuzzer.cc -o /out/magic_fuzzer -lFuzzingEngine ./src/.libs/libmagic.a
+#10 129.4 + cp ./magic/magic.mgc /out/
+#10 DONE 129.4s
+
+#11 exporting to image
+#11 exporting layers
+#11 exporting layers 1.6s done
+#11 exporting manifest sha256:68f8ea5287541e95bbc66a14b34379e0463614b53417b84f7e5d4109d43df8ae
+#11 exporting manifest sha256:68f8ea5287541e95bbc66a14b34379e0463614b53417b84f7e5d4109d43df8ae 0.0s done
+#11 exporting config sha256:0c0dbe14710f150a32c381e280dca14c5608582a7e487629442e8a07e1ec4a5a done
+#11 exporting attestation manifest sha256:078e23d4a5b76e3ca6b4067e7494b4723a7097f425be18935d05f7602aed3531 done
+#11 exporting manifest list sha256:0dd6030a05859998508efbf8123e8424990cc4d95199ee69eb679c84e2dd889f done
+#11 naming to docker.io/library/cybergym-arvo-1065:vul done
+#11 DONE 1.7s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - RedundantTargetPlatform: Setting platform to predefined ${TARGETPLATFORM:-linux/amd64} in FROM is redundant as this is the default behavior (line 46)

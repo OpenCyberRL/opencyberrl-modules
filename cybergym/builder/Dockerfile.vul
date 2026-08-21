@@ -1,0 +1,71 @@
+# Vulnerable-build template for CyberGym (OSS-Fuzz) tasks.
+#
+# Fully parameterized through build args:
+#   REPO_URL   URL of the repo-vul.tar.gz tarball from the HF dataset. The
+#              tarball's root directory (src-vul/) is stripped so its contents
+#              land in /src exactly as OSS-Fuzz expects: build.sh, the fuzzer
+#              harness(es) and the project sources.
+#   FUZZER     name of the fuzzer binary the build must produce in /out.
+#   SANITIZER  address | memory | undefined (default: address). memory needs
+#              the MSan-instrumented libc++ that only the amd64 base image
+#              ships — build-step.sh fails the build fast otherwise, rather
+#              than silently linking uninstrumented libc++.
+#   BUILD_DIR  project subdir of /src where build.sh runs (default: .). The
+#              dataset's build.sh scripts assume the OSS-Fuzz convention of
+#              WORKDIR being the project's own directory.
+#   EXTRA_PKGS space-separated apt packages the project's build needs beyond
+#              base-builder (OSS-Fuzz project images install these on top of
+#              the base; e.g. file needs autotools). Optional.
+#   BASE_IMAGE OSS-Fuzz base-builder image. Default: the digest-pinned
+#              multi-arch manifest list (linux/amd64 + linux/arm64) published
+#              as gcr.io/oss-fuzz-base/base-builder:manifest-latest — the
+#              plain :latest tag is amd64-only. Pinning the digest keeps the
+#              base reproducible; being a manifest list lets the same default
+#              resolve natively on both architectures.
+#
+# Platform policy: TARGETPLATFORM is BuildKit's automatic platform arg and
+# defaults to the BUILD HOST's platform, so a plain `docker build` compiles
+# natively (linux/arm64 on Apple Silicon, linux/amd64 on x86) instead of
+# pulling amd64 and emulating. The fallback default linux/amd64 covers
+# non-BuildKit builders. For bit-reproducible output independent of the build
+# host, pass an explicit platform: `docker build --platform linux/amd64 ...`
+# (or build_image(..., platform="linux/amd64")) — MSan tasks must do exactly
+# that, per the SANITIZER note above.
+#
+# The actual compile lives in build-step.sh (COPYed below), shared verbatim
+# with Dockerfile.fix; see its header for what it does and why the base
+# image's `compile` entrypoint cannot be used directly.
+#
+# The full toolchain, /src and /out stay in the image on purpose: the
+# patch-rebuild stage (ticket modules#4) recompiles in place.
+
+ARG BASE_IMAGE=gcr.io/oss-fuzz-base/base-builder@sha256:37dfe1d3ac202661648304deff282d64f30f036f5999706dba556f45268ba447
+# BuildKit's automatic platform arg: host platform by default (native build),
+# or whatever `docker build --platform` requests.
+ARG TARGETPLATFORM
+FROM --platform=${TARGETPLATFORM:-linux/amd64} ${BASE_IMAGE}
+ARG REPO_URL
+ARG FUZZER
+ARG SANITIZER=address
+ARG BUILD_DIR=.
+ARG EXTRA_PKGS=
+
+# The RUNs below use bash-only syntax ([[ ]], pipefail); the default /bin/sh
+# (dash) would reject them.
+SHELL ["/bin/bash", "-c"]
+
+# Project build dependencies, layered before the source unpack so the (more
+# stable) dependency layer stays cached when REPO_URL changes.
+RUN if [[ -n "$EXTRA_PKGS" ]]; then \
+        apt-get update && apt-get install -y $EXTRA_PKGS && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+ENV SANITIZER=${SANITIZER}
+
+RUN set -o pipefail \
+ && mkdir -p /src \
+ && curl -fsSL "$REPO_URL" | tar -xz --strip-components=1 -C /src
+WORKDIR /src/${BUILD_DIR}
+
+COPY build-step.sh /usr/local/bin/build-step.sh
+RUN bash /usr/local/bin/build-step.sh

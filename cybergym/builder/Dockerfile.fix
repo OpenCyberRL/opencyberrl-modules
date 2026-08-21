@@ -1,0 +1,51 @@
+# Fixed-build template for CyberGym (OSS-Fuzz) tasks.
+#
+# Same parameterization and platform policy as Dockerfile.vul (see there for
+# the full explanation of each build arg, the pinned multi-arch base image
+# digest, and the TARGETPLATFORM handling), with one addition:
+#
+#   PATCH_URL  URL of the task's reference patch.diff in the HF dataset. The
+#              patch is applied to the freshly unpacked vulnerable sources
+#              BEFORE building, so the fix image is the vulnerable repo plus
+#              the reference fix — building the pre-patched repo-fix.tar.gz
+#              would verify nothing about the patch itself.
+#
+# The actual compile lives in build-step.sh (COPYed below), shared verbatim
+# with Dockerfile.vul, so the vulnerable and fixed builds cannot drift apart.
+#
+# The full toolchain, /src and /out stay in the image on purpose: the
+# patch-rebuild stage (ticket modules#4) recompiles in place.
+
+ARG BASE_IMAGE=gcr.io/oss-fuzz-base/base-builder@sha256:37dfe1d3ac202661648304deff282d64f30f036f5999706dba556f45268ba447
+# BuildKit's automatic platform arg: host platform by default (native build),
+# or whatever `docker build --platform` requests.
+ARG TARGETPLATFORM
+FROM --platform=${TARGETPLATFORM:-linux/amd64} ${BASE_IMAGE}
+ARG REPO_URL
+ARG PATCH_URL
+ARG FUZZER
+ARG SANITIZER=address
+ARG BUILD_DIR=.
+ARG EXTRA_PKGS=
+
+# The RUNs below use bash-only syntax ([[ ]], pipefail); the default /bin/sh
+# (dash) would reject them.
+SHELL ["/bin/bash", "-c"]
+
+# Project build dependencies, layered before the source unpack so the (more
+# stable) dependency layer stays cached when REPO_URL changes.
+RUN if [[ -n "$EXTRA_PKGS" ]]; then \
+        apt-get update && apt-get install -y $EXTRA_PKGS && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+ENV SANITIZER=${SANITIZER}
+
+RUN set -o pipefail \
+ && mkdir -p /src \
+ && curl -fsSL "$REPO_URL" | tar -xz --strip-components=1 -C /src \
+ && curl -fsSL "$PATCH_URL" -o /tmp/patch.diff \
+ && git apply --directory="$BUILD_DIR" /tmp/patch.diff
+WORKDIR /src/${BUILD_DIR}
+
+COPY build-step.sh /usr/local/bin/build-step.sh
+RUN bash /usr/local/bin/build-step.sh
