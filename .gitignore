@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+# CyberGym repo tarballs are fetched at image-build time, never committed.
+cybergym/testdata/**/*.tar.gz
+cybergym/testdata/**/*.tgz

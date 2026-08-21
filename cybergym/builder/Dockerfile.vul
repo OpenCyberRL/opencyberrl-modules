@@ -1,0 +1,50 @@
+# Vulnerable-build template for CyberGym (OSS-Fuzz) tasks.
+#
+# Fully parameterized through build args:
+#   REPO_URL   URL of the repo-vul.tar.gz tarball from the HF dataset. The
+#              tarball's root directory (src-vul/) is stripped so its contents
+#              land in /src exactly as OSS-Fuzz expects: build.sh, the fuzzer
+#              harness(es) and the project sources.
+#   FUZZER     name of the fuzzer binary the build must produce in /out.
+#   SANITIZER  address | memory | undefined (default: address).
+#   BUILD_DIR  project subdir of /src where build.sh runs (default: .). The
+#              dataset's build.sh scripts assume the OSS-Fuzz convention of
+#              WORKDIR being the project's own directory.
+#   BASE_IMAGE OSS-Fuzz base-builder image (default: the public gcr.io tag;
+#              pin a digest per task for bit-reproducible builds).
+#
+# We deliberately do NOT invoke the base image's `compile` entrypoint: it
+# starts with `sysctl -w vm.mmap_rnd_bits=28`, which fails under unprivileged
+# `docker build` (read-only /proc/sys). The RUN below reproduces the parts of
+# compile/compile_libfuzzer that matter for C/C++ targets: merge the
+# sanitizer flags into CFLAGS/CXXFLAGS, stage the MSan-instrumented libc++
+# for memory builds, expose libFuzzer as -lFuzzingEngine, then run the
+# project's build.sh. Keep this in sync with Dockerfile.fix.
+#
+# The full toolchain, /src and /out stay in the image on purpose: the
+# patch-rebuild stage (ticket modules#4) recompiles in place.
+
+ARG BASE_IMAGE=gcr.io/oss-fuzz-base/base-builder
+FROM ${BASE_IMAGE}
+ARG REPO_URL
+ARG FUZZER
+ARG SANITIZER=address
+ARG BUILD_DIR=.
+ENV SANITIZER=${SANITIZER}
+
+RUN mkdir -p /src \
+ && curl -fsSL "$REPO_URL" | tar -xz --strip-components=1 -C /src
+WORKDIR /src/${BUILD_DIR}
+
+RUN flags="SANITIZER_FLAGS_${SANITIZER}" \
+ && export CFLAGS="$CFLAGS ${!flags} $COVERAGE_FLAGS" \
+ && export CXXFLAGS="$CFLAGS $CXXFLAGS_EXTRA" \
+ && if [ "$SANITIZER" = "undefined" ]; then export CFLAGS="$CFLAGS -fno-sanitize=function"; fi \
+ && if [ "$SANITIZER" = "memory" ]; then \
+        cp -R /usr/msan/lib/* /usr/local/lib/x86_64-unknown-linux-gnu/; \
+        cp -R /usr/msan/include/* /usr/local/include; \
+    fi \
+ && cp /usr/local/lib/clang/*/lib/${ARCHITECTURE}-unknown-linux-gnu/libclang_rt.fuzzer.a \
+      /usr/lib/libFuzzingEngine.a \
+ && bash -eux /src/build.sh \
+ && test -x "$OUT/$FUZZER"

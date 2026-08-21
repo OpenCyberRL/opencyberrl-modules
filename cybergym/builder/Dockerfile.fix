@@ -1,0 +1,42 @@
+# Fixed-build template for CyberGym (OSS-Fuzz) tasks.
+#
+# Same parameterization and build steps as Dockerfile.vul (see there for the
+# full explanation of each arg and of why `compile` is not used; keep the two
+# build RUN blocks in sync), with one addition:
+#
+#   PATCH_URL  URL of the task's reference patch.diff in the HF dataset. The
+#              patch is applied to the freshly unpacked vulnerable sources
+#              BEFORE building, so the fix image is the vulnerable repo plus
+#              the reference fix — building the pre-patched repo-fix.tar.gz
+#              would verify nothing about the patch itself.
+#
+# The full toolchain, /src and /out stay in the image on purpose: the
+# patch-rebuild stage (ticket modules#4) recompiles in place.
+
+ARG BASE_IMAGE=gcr.io/oss-fuzz-base/base-builder
+FROM ${BASE_IMAGE}
+ARG REPO_URL
+ARG PATCH_URL
+ARG FUZZER
+ARG SANITIZER=address
+ARG BUILD_DIR=.
+ENV SANITIZER=${SANITIZER}
+
+RUN mkdir -p /src \
+ && curl -fsSL "$REPO_URL" | tar -xz --strip-components=1 -C /src \
+ && curl -fsSL "$PATCH_URL" -o /tmp/patch.diff \
+ && git apply --directory="$BUILD_DIR" /tmp/patch.diff
+WORKDIR /src/${BUILD_DIR}
+
+RUN flags="SANITIZER_FLAGS_${SANITIZER}" \
+ && export CFLAGS="$CFLAGS ${!flags} $COVERAGE_FLAGS" \
+ && export CXXFLAGS="$CFLAGS $CXXFLAGS_EXTRA" \
+ && if [ "$SANITIZER" = "undefined" ]; then export CFLAGS="$CFLAGS -fno-sanitize=function"; fi \
+ && if [ "$SANITIZER" = "memory" ]; then \
+        cp -R /usr/msan/lib/* /usr/local/lib/x86_64-unknown-linux-gnu/; \
+        cp -R /usr/msan/include/* /usr/local/include; \
+    fi \
+ && cp /usr/local/lib/clang/*/lib/${ARCHITECTURE}-unknown-linux-gnu/libclang_rt.fuzzer.a \
+      /usr/lib/libFuzzingEngine.a \
+ && bash -eux /src/build.sh \
+ && test -x "$OUT/$FUZZER"

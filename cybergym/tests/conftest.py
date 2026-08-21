@@ -1,4 +1,4 @@
-"""Shared cybergym test helpers: path constants and registration import."""
+"""Shared cybergym test helpers: path bootstrap, constants, fixtures."""
 from __future__ import annotations
 
 import importlib.util
@@ -8,7 +8,15 @@ from pathlib import Path
 import pytest
 
 MODULE_DIR = Path(__file__).resolve().parents[1]
+MODULE_ROOT = Path(__file__).resolve().parents[2]   # .../opencyberrl-modules
 TASK_PY = MODULE_DIR / "tasks" / "task.py"
+TESTDATA = MODULE_DIR / "testdata"
+
+# The module lives in its own checkout while its tests run against the opencrl
+# package from the core checkout, so make this repo's root importable no matter
+# which directory pytest was invoked from.
+if str(MODULE_ROOT) not in sys.path:
+    sys.path.insert(0, str(MODULE_ROOT))
 
 
 def load_registration():
@@ -31,3 +39,9 @@ def registration():
 def module_dir() -> Path:
     """The cybergym module directory."""
     return MODULE_DIR
+
+
+@pytest.fixture(scope="session")
+def testdata() -> Path:
+    """Directory of real CyberGym artifacts (error.txt, patch.diff, ...)."""
+    return TESTDATA
