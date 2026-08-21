@@ -56,6 +56,7 @@ def build_image(
     patch_url: str | None = None,
     base_image: str = DEFAULT_BASE_IMAGE,
     platform: str | None = None,
+    log_path: Path | None = None,
 ) -> str:
     """docker build one of the templates. Returns the tag on success.
 
@@ -65,6 +66,9 @@ def build_image(
     beyond the OSS-Fuzz base image. platform selects the target platform
     explicitly (e.g. "linux/arm64"); by default none is passed and the
     templates' TARGETPLATFORM handling builds natively for the docker host.
+    log_path: when given, the full build log (stdout+stderr) is written
+    there — for the onboarding report; without it a successful build's
+    output is discarded (a failed build raises with the log tail).
     """
     dockerfile = Path(dockerfile)
     is_fix = dockerfile.name == DOCKERFILE_FIX.name
@@ -98,8 +102,13 @@ def build_image(
             f"docker build of {tag} timed out after {BUILD_TIMEOUT:.0f}s: "
             f"{' '.join(args)}"
         ) from exc
+
+    log = (result.stdout or "") + (result.stderr or "")
+    if log_path is not None:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(log)
     if result.returncode != 0:
-        tail = (result.stdout + result.stderr)[-2000:]
+        tail = log[-2000:]
         print(f"docker build of {tag} failed:\n{tail}", file=sys.stderr)
         raise RuntimeError(
             f"docker build of {tag} failed (exit {result.returncode}):\n{tail}"

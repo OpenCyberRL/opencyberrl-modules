@@ -93,6 +93,45 @@ def test_build_step_fails_fast_without_msan_libcxx() -> None:
     assert '"$SANITIZER" == "memory"' in script
     assert "! -d /usr/msan" in script
 
+def test_build_step_matches_fuzzer_runtime_to_the_actual_arch() -> None:
+    # The amd64 base image lays its runtimes out as lib/linux/
+    # libclang_rt.fuzzer-<arch>.a for SEVERAL architectures; the second
+    # probe's unanchored glob + head -1 picked the alphabetically first
+    # (libclang_rt.fuzzer-i386.a) and the link died with "skipping
+    # incompatible /usr/lib/libFuzzingEngine.a" (seen building arvo:1065
+    # with SANITIZER=memory --platform linux/amd64). The probe must anchor
+    # on the machine the build actually targets: uname -m (the
+    # $ARCHITECTURE env is stale x86_64 in the arm64 image, so it cannot
+    # drive the suffix either).
+    script = BUILD_STEP.read_text()
+    assert "libclang_rt.fuzzer-$(uname -m).a" in script
+
+def test_build_step_builds_libfuzzer_when_base_has_no_prebuilt_runtime() -> None:
+    # The 2017-era OSS-Fuzz base images ship libFuzzer as SOURCES under
+    # /src/libfuzzer and no prebuilt runtime anywhere (their `compile`
+    # entrypoint built the engine on the fly). Old MSan bugs (e.g. arvo:1065)
+    # are only observable with those pre-interceptor toolchains, so
+    # build-step must fall back to compiling the engine exactly like the
+    # era's compile_libfuzzer did: raw CXXFLAGS + SANITIZER_FLAGS +
+    # -fno-sanitize=vptr, archived into $LIB_FUZZING_ENGINE.
+    script = BUILD_STEP.read_text()
+    assert '"$SRC"/libfuzzer/*.cpp' in script
+    assert 'ar r "$engine"' in script
+    # The fallback engine build must use the RAW CXXFLAGS (pre flag-merge),
+    # like compile_libfuzzer, not the coverage-instrumented merged ones.
+    assert script.index('"$SRC"/libfuzzer/*.cpp') < script.index(
+        'export CFLAGS="$CFLAGS ${!flags} $COVERAGE_FLAGS"')
+
+
+def test_build_step_stages_msan_libcxx_era_agnostically() -> None:
+    # The modern base images keep clang libs in the per-triple dir; the
+    # 2017-era `compile` copied /usr/msan/lib straight into /usr/lib. Both
+    # destinations get the copy so either toolchain resolves the
+    # MSan-instrumented libc++.
+    script = BUILD_STEP.read_text()
+    assert "mkdir -p /usr/local/lib/x86_64-unknown-linux-gnu" in script
+    assert "cp -R /usr/msan/lib/* /usr/lib/" in script
+
 
 def test_templates_run_builds_under_bash() -> None:
     for path in (DOCKERFILE_VUL, DOCKERFILE_FIX):
@@ -247,6 +286,32 @@ def test_build_image_raises_on_docker_failure(monkeypatch: pytest.MonkeyPatch) -
     with pytest.raises(RuntimeError, match="no route to gcr.io"):
         build_image(DOCKERFILE_VUL, "t", repo_url=REPO_URL, fuzzer="magic_fuzzer")
 
+def test_build_image_writes_full_log_when_given_a_path(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # The onboarding report needs the full docker build log (not just the
+    # failure tail build_image prints), so an optional log_path captures it.
+    def fake_run(args: list[str], **kwargs) -> SimpleNamespace:
+        return SimpleNamespace(returncode=0, stdout="step 1/6\nstep 2/6\n",
+                               stderr="warning: something\n")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    log = tmp_path / "vul-build.log"
+    build_image(DOCKERFILE_VUL, "t", repo_url=REPO_URL, fuzzer="magic_fuzzer",
+                log_path=log)
+    text = log.read_text()
+    assert "step 1/6" in text and "warning: something" in text
+
+
+def test_build_image_without_log_path_writes_no_log(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # No log_path -> a successful build writes nothing anywhere (the
+    # original behavior; only failures report, via the raised RuntimeError).
+    def fake_run(args: list[str], **kwargs) -> SimpleNamespace:
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    build_image(DOCKERFILE_VUL, "t", repo_url=REPO_URL, fuzzer="magic_fuzzer")
+    assert list(tmp_path.iterdir()) == []
 
 def test_build_image_times_out_rather_than_hanging(monkeypatch: pytest.MonkeyPatch) -> None:
     # A wedged docker build must surface as a RuntimeError naming the
