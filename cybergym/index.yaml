@@ -1,0 +1,8 @@
+# cybergym task index — the format documented in cybergym/README.md.
+#
+# Each entry onboarded here registers one task variant per onboarded
+# difficulty level (l0–l3) when opencrl discovers this module. No tasks are
+# onboarded yet: the real worlds/goals (modules#2) and rewards (modules#3)
+# have not landed, so the index ships empty. An empty index is valid — the
+# module installs with zero tasks onboarded.
+tasks: []
