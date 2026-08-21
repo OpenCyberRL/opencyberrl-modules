@@ -10,27 +10,59 @@
 #   BUILD_DIR  project subdir of /src where build.sh runs (default: .). The
 #              dataset's build.sh scripts assume the OSS-Fuzz convention of
 #              WORKDIR being the project's own directory.
-#   BASE_IMAGE OSS-Fuzz base-builder image (default: the public gcr.io tag;
-#              pin a digest per task for bit-reproducible builds).
+#   EXTRA_PKGS space-separated apt packages the project's build needs beyond
+#              base-builder (OSS-Fuzz project images install these on top of
+#              the base; e.g. file needs autotools). Optional.
+#   BASE_IMAGE OSS-Fuzz base-builder image. Default: the digest-pinned
+#              multi-arch manifest list (linux/amd64 + linux/arm64) published
+#              as gcr.io/oss-fuzz-base/base-builder:manifest-latest — the
+#              plain :latest tag is amd64-only. Pinning the digest keeps the
+#              base reproducible; being a manifest list lets the same default
+#              resolve natively on both architectures.
+#
+# Platform policy: TARGETPLATFORM is BuildKit's automatic platform arg and
+# defaults to the BUILD HOST's platform, so a plain `docker build` compiles
+# natively (linux/arm64 on Apple Silicon, linux/amd64 on x86) instead of
+# pulling amd64 and emulating. The fallback default linux/amd64 covers
+# non-BuildKit builders. For bit-reproducible output independent of the build
+# host, pass an explicit platform: `docker build --platform linux/amd64 ...`
+# (or build_image(..., platform="linux/amd64")).
 #
 # We deliberately do NOT invoke the base image's `compile` entrypoint: it
 # starts with `sysctl -w vm.mmap_rnd_bits=28`, which fails under unprivileged
 # `docker build` (read-only /proc/sys). The RUN below reproduces the parts of
 # compile/compile_libfuzzer that matter for C/C++ targets: merge the
 # sanitizer flags into CFLAGS/CXXFLAGS, stage the MSan-instrumented libc++
-# for memory builds, expose libFuzzer as -lFuzzingEngine, then run the
-# project's build.sh. Keep this in sync with Dockerfile.fix.
+# for memory builds, stage libFuzzer as /usr/lib/libFuzzingEngine.a, then run
+# the project's build.sh. The two base images lay out the clang runtime
+# differently (amd64: lib/<triple>/libclang_rt.fuzzer.a, arm64:
+# lib/linux/libclang_rt.fuzzer-<arch>.a), so the lookup handles both. Keep
+# this in sync with Dockerfile.fix.
 #
 # The full toolchain, /src and /out stay in the image on purpose: the
 # patch-rebuild stage (ticket modules#4) recompiles in place.
 
-ARG BASE_IMAGE=gcr.io/oss-fuzz-base/base-builder
-FROM ${BASE_IMAGE}
+ARG BASE_IMAGE=gcr.io/oss-fuzz-base/base-builder@sha256:37dfe1d3ac202661648304deff282d64f30f036f5999706dba556f45268ba447
+# BuildKit's automatic platform arg: host platform by default (native build),
+# or whatever `docker build --platform` requests.
+ARG TARGETPLATFORM
+FROM --platform=${TARGETPLATFORM:-linux/amd64} ${BASE_IMAGE}
 ARG REPO_URL
 ARG FUZZER
 ARG SANITIZER=address
 ARG BUILD_DIR=.
+ARG EXTRA_PKGS=
 ENV SANITIZER=${SANITIZER}
+
+# The build RUN needs bash-only syntax (indirect expansion ${!flags}); the
+# default /bin/sh (dash) would reject it.
+SHELL ["/bin/bash", "-c"]
+
+# Project build dependencies, layered before the source unpack so the (more
+# stable) dependency layer stays cached when REPO_URL changes.
+RUN if [[ -n "$EXTRA_PKGS" ]]; then \
+        apt-get update && apt-get install -y $EXTRA_PKGS; \
+    fi
 
 RUN mkdir -p /src \
  && curl -fsSL "$REPO_URL" | tar -xz --strip-components=1 -C /src
@@ -39,12 +71,16 @@ WORKDIR /src/${BUILD_DIR}
 RUN flags="SANITIZER_FLAGS_${SANITIZER}" \
  && export CFLAGS="$CFLAGS ${!flags} $COVERAGE_FLAGS" \
  && export CXXFLAGS="$CFLAGS $CXXFLAGS_EXTRA" \
- && if [ "$SANITIZER" = "undefined" ]; then export CFLAGS="$CFLAGS -fno-sanitize=function"; fi \
- && if [ "$SANITIZER" = "memory" ]; then \
+ && if [[ "$SANITIZER" == "undefined" ]]; then export CFLAGS="$CFLAGS -fno-sanitize=function"; fi \
+ && if [[ -d /usr/msan ]]; then \
         cp -R /usr/msan/lib/* /usr/local/lib/x86_64-unknown-linux-gnu/; \
         cp -R /usr/msan/include/* /usr/local/include; \
     fi \
- && cp /usr/local/lib/clang/*/lib/${ARCHITECTURE}-unknown-linux-gnu/libclang_rt.fuzzer.a \
-      /usr/lib/libFuzzingEngine.a \
+ && rt="$(ls /usr/local/lib/clang/*/lib/${ARCHITECTURE}-unknown-linux-gnu/libclang_rt.fuzzer.a 2>/dev/null | head -1)" \
+ && if [[ -z "$rt" ]]; then \
+        rt="$(ls /usr/local/lib/clang/*/lib/linux/libclang_rt.fuzzer-*.a 2>/dev/null | head -1)"; \
+    fi \
+ && test -n "$rt" \
+ && cp "$rt" /usr/lib/libFuzzingEngine.a \
  && bash -eux /src/build.sh \
  && test -x "$OUT/$FUZZER"

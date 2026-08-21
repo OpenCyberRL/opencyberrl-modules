@@ -16,6 +16,12 @@ ARVO_1065 = "arvo:1065"
 FUZZER = "magic_fuzzer"
 BUILD_DIR = "file"          # the tarball's project subdir where build.sh runs
 SANITIZER = "memory"        # arvo:1065 is a MemorySanitizer task
+# The file project's build.sh needs autotools beyond base-builder (mirrors
+# the oss-fuzz projects/file Dockerfile). Deliberately NOT the compression
+# dev libs: the reference build ran without them, so configure disabled
+# zlib/bz2/lzma — installing them would enable features the reference fuzzer
+# never linked against.
+EXTRA_PKGS = "make autoconf automake libtool shtool"
 
 requires_docker = pytest.mark.skipif(
     docker("info").returncode != 0, reason="docker daemon not reachable"
@@ -33,6 +39,7 @@ def images():
         fuzzer=FUZZER,
         sanitizer=SANITIZER,
         build_dir=BUILD_DIR,
+        extra_pkgs=EXTRA_PKGS,
     )
     build_image(
         DOCKERFILE_FIX,
@@ -42,6 +49,7 @@ def images():
         fuzzer=FUZZER,
         sanitizer=SANITIZER,
         build_dir=BUILD_DIR,
+        extra_pkgs=EXTRA_PKGS,
     )
     return f"{tag}:vul", f"{tag}:fix"
 

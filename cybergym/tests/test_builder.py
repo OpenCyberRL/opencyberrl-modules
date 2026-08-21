@@ -54,6 +54,26 @@ def test_templates_unpack_repo_into_src_and_check_fuzzer() -> None:
         assert "apt-get clean" not in text
 
 
+def test_templates_run_builds_under_bash() -> None:
+    for path in (DOCKERFILE_VUL, DOCKERFILE_FIX):
+        text = path.read_text()
+        # The build RUN uses bash-only indirect expansion (${!flags}); RUN's
+        # default /bin/sh (dash) would reject it. SHELL must precede the
+        # first RUN that needs bash.
+        assert text.index('SHELL ["/bin/bash", "-c"]') < text.index("RUN flags=")
+
+
+def test_templates_target_the_build_platform() -> None:
+    for path in (DOCKERFILE_VUL, DOCKERFILE_FIX):
+        text = path.read_text()
+        # BuildKit's automatic platform arg, defaulting to the host platform
+        # (native build) with an amd64 fallback for non-BuildKit builders;
+        # the pinned multi-arch base resolves per platform.
+        assert "ARG TARGETPLATFORM" in text
+        assert "FROM --platform=${TARGETPLATFORM:-linux/amd64} ${BASE_IMAGE}" in text
+        assert "@sha256:" in DEFAULT_BASE_IMAGE
+
+
 def test_hf_url_points_at_cybergym_dataset() -> None:
     assert hf_url("arvo:1065", "repo-vul.tar.gz") == (
         "https://huggingface.co/datasets/sunblaze-ucb/cybergym"
@@ -86,10 +106,12 @@ def test_build_image_passes_build_args(monkeypatch: pytest.MonkeyPatch) -> None:
         "FUZZER=magic_fuzzer",
         "SANITIZER=memory",
         "BUILD_DIR=file",
-        f"BASE_IMAGE={DEFAULT_BASE_IMAGE}",
+        "EXTRA_PKGS=",
     ):
         assert build_arg in args, build_arg
-    assert not any(a.startswith("PATCH_URL=") for a in args)
+    # Default: no explicit platform -> the templates' TARGETPLATFORM
+    # handling builds natively for the docker host.
+    assert "--platform" not in args
 
 
 def test_build_image_passes_patch_url_for_fix(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -108,6 +130,43 @@ def test_build_image_passes_patch_url_for_fix(monkeypatch: pytest.MonkeyPatch) -
         fuzzer="magic_fuzzer",
     )
     assert f"PATCH_URL={PATCH_URL}" in recorded["args"]
+
+
+def test_build_image_forwards_extra_pkgs(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorded: dict = {}
+
+    def fake_run(args: list[str], **kwargs) -> SimpleNamespace:
+        recorded["args"] = args
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    build_image(
+        DOCKERFILE_VUL,
+        "t",
+        repo_url=REPO_URL,
+        fuzzer="magic_fuzzer",
+        extra_pkgs="autoconf automake libtool",
+    )
+    assert "EXTRA_PKGS=autoconf automake libtool" in recorded["args"]
+
+
+def test_build_image_forwards_explicit_platform(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorded: dict = {}
+
+    def fake_run(args: list[str], **kwargs) -> SimpleNamespace:
+        recorded["args"] = args
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    build_image(
+        DOCKERFILE_VUL,
+        "t",
+        repo_url=REPO_URL,
+        fuzzer="magic_fuzzer",
+        platform="linux/amd64",
+    )
+    args = recorded["args"]
+    assert args[args.index("--platform") + 1] == "linux/amd64"
 
 
 def test_fix_template_requires_patch_url() -> None:
