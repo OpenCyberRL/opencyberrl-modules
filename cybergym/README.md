@@ -34,12 +34,10 @@ tasks:                       # list of onboarded entries; [] is valid (empty mod
     provenance:              # required mapping — at minimum a non-empty repo
       repo: https://github.com/curl/curl
       commit: deadbeef       # optional — pinned upstream revision
-```
-
-Loading is strict: malformed entries, unknown sources, out-of-range or
-duplicate levels, missing provenance, or duplicate ids raise `ValueError`.
-An empty file, `tasks:` with no value, or `tasks: []` is a valid empty index —
-the module installs with zero tasks onboarded.
+Loading is strict: malformed entries, unknown keys, unknown sources,
+out-of-range or duplicate levels, missing provenance, or duplicate ids raise
+`ValueError`. An empty file, `tasks:` with no value, or `tasks: []` is a
+valid empty index — the module installs with zero tasks onboarded.
 
 ## Task names
 

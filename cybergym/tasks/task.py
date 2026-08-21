@@ -19,6 +19,7 @@ sibling module.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -30,11 +31,13 @@ from opencrl import Task, task
 MODULE = "cybergym"
 SOURCES = ("arvo", "oss-fuzz")
 MAX_LEVEL = 3
-DEFAULT_LEVELS = (0, 1, 2, 3)
+DEFAULT_LEVELS = tuple(range(MAX_LEVEL + 1))
 
 INDEX_PATH = Path(__file__).resolve().parent.parent / "index.yaml"
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+_ENTRY_KEYS = frozenset({"id", "source", "project", "language", "levels", "provenance"})
+
 
 
 def load_index(path: str | Path = INDEX_PATH) -> list[dict]:
@@ -43,16 +46,20 @@ def load_index(path: str | Path = INDEX_PATH) -> list[dict]:
     An empty file, ``tasks:`` with no value, or ``tasks: []`` is a valid
     empty index (the module installs with zero tasks onboarded).
     """
-    doc = yaml.safe_load(Path(path).read_text()) or {}
+    doc = yaml.safe_load(Path(path).read_text())
+    if doc is None:
+        doc = {}
     if not isinstance(doc, Mapping):
         raise ValueError(
             f"index must be a mapping with a 'tasks' list, got {type(doc).__name__}")
-    raw = doc.get("tasks") or []
+    raw = doc.get("tasks")
+    if raw is None:
+        raw = []
     if not isinstance(raw, list):
         raise ValueError(f"'tasks' must be a list, got {type(raw).__name__}")
     entries = [_normalize_entry(item, i) for i, item in enumerate(raw)]
-    ids = [entry["id"] for entry in entries]
-    dupes = sorted({task_id for task_id in ids if ids.count(task_id) > 1})
+    counts = Counter(entry["id"] for entry in entries)
+    dupes = sorted(task_id for task_id, n in counts.items() if n > 1)
     if dupes:
         raise ValueError(f"duplicate task id(s) in index: {', '.join(dupes)}")
     return entries
@@ -68,6 +75,9 @@ def _normalize_entry(raw: Any, i: int) -> dict:
         value = entry.get(key)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{where} needs a non-empty string {key!r}")
+    unknown = sorted(set(entry) - _ENTRY_KEYS)
+    if unknown:
+        raise ValueError(f"{where} has unknown key(s): {', '.join(unknown)}")
     if not _ID_RE.match(entry["id"]):
         raise ValueError(
             f"{where} id {entry['id']!r} must match {_ID_RE.pattern}")
@@ -77,8 +87,11 @@ def _normalize_entry(raw: Any, i: int) -> dict:
             f"got {entry['source']!r}")
     entry["levels"] = _normalize_levels(entry.get("levels", list(DEFAULT_LEVELS)), where)
     provenance = entry.get("provenance")
-    if not isinstance(provenance, Mapping) or not provenance.get("repo"):
-        raise ValueError(f"{where} needs provenance with a non-empty 'repo'")
+    if not isinstance(provenance, Mapping):
+        raise ValueError(f"{where} needs a 'provenance' mapping")
+    repo = provenance.get("repo")
+    if not isinstance(repo, str) or not repo.strip():
+        raise ValueError(f"{where} needs provenance with a non-empty string 'repo'")
     entry["provenance"] = dict(provenance)
     return entry
 
