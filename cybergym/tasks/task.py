@@ -6,11 +6,14 @@
 registers one task per onboarded difficulty level of every entry, named
 ``cybergym_<source>_<id>_l<N>``.
 
-Placeholder worlds and rewards: the real world, goal, and reward bodies come
-from the cybergym builders (modules#2) and the cybergym reward library
-(modules#3).  Until those land, every variant is a valid Task on the mock
-backend with a trivial zero reward.  The placeholder lives here, at the
-registration layer only, so the builder and reward modules stay free of it.
+Entries written by the onboarding tool (``cybergym/onboard.py``) carry their
+full build recipe (fuzzer, sanitizer, poc, ...) and get the REAL wiring: a
+docker world built from the cybergym builders — the vulnerable target the
+agent explores plus the reference fix on an isolated network — and the gated
+three-stage reward from the cybergym reward library.  Entries without a
+recipe are pre-onboarding placeholders: a valid Task on the mock backend
+with a trivial zero reward, so the module keeps installing while tasks wait
+for onboarding.
 
 This file is exec'd by ``discover()`` as a standalone module (no package
 context), so the index loader lives here too rather than in an importable
@@ -27,6 +30,8 @@ from typing import Any
 import yaml
 
 from opencrl import Task, task
+from cybergym.builder.build import DEFAULT_BASE_IMAGE, hf_url
+from cybergym.lib.reward import make_reward
 
 MODULE = "cybergym"
 SOURCES = ("arvo", "oss-fuzz")
@@ -34,9 +39,22 @@ MAX_LEVEL = 3
 DEFAULT_LEVELS = tuple(range(MAX_LEVEL + 1))
 
 INDEX_PATH = Path(__file__).resolve().parent.parent / "index.yaml"
+_BUILDER_DIR = Path(__file__).resolve().parent.parent / "builder"
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
-_ENTRY_KEYS = frozenset({"id", "source", "project", "language", "levels", "provenance"})
+# Base keys every entry carries; the ONBOARDED keys are written only by
+# cybergym.onboard's accept step and switch the entry to the real wiring.
+_ENTRY_KEYS = frozenset({
+    "id", "source", "project", "language", "levels", "provenance",
+    "fuzzer", "sanitizer", "build_dir", "poc", "extra_pkgs", "base_image",
+    "platform",
+})
+_ONBOARDED_KEYS = ("fuzzer", "sanitizer", "build_dir", "poc")
+
+
+def _is_onboarded(entry: Mapping[str, Any]) -> bool:
+    """An entry is fully onboarded when it carries its build recipe."""
+    return all(key in entry for key in _ONBOARDED_KEYS)
 
 
 
@@ -93,6 +111,9 @@ def _normalize_entry(raw: Any, i: int) -> dict:
     if not isinstance(repo, str) or not repo.strip():
         raise ValueError(f"{where} needs provenance with a non-empty string 'repo'")
     entry["provenance"] = dict(provenance)
+    for key in _ONBOARDED_KEYS:
+        if key in entry and (not isinstance(entry[key], str) or not entry[key].strip()):
+            raise ValueError(f"{where} needs a non-empty string {key!r}")
     return entry
 
 
@@ -133,9 +154,8 @@ def group_index(entries: Sequence[Mapping[str, Any]]) -> list[dict]:
         for level in entry["levels"]
     ]
 
-
 def _placeholder_reward() -> Any:
-    """Trivial zero reward standing in for the cybergym reward lib (modules#3)."""
+    """Trivial zero reward for pre-onboarding placeholder entries."""
 
     def reward(state: Any) -> float:
         return 0.0
@@ -143,17 +163,78 @@ def _placeholder_reward() -> Any:
     return reward
 
 
+def _build_world(entry: Mapping[str, Any]) -> dict:
+    """The compose world for an onboarded entry.
+
+    ``vul`` is the vulnerable target the agent explores (sources, toolchain
+    and PoC all in place — the patch-rebuild stage recompiles in there);
+    ``fix`` is the same sources plus the reference patch, on its own
+    network so the agent cannot reach the reference solution. Both images
+    are built from the module's own builder templates, so the world is
+    reproducible from a fresh checkout. The backend renders every network
+    internal (Caps.needs_internet=False).
+    """
+    task_id = f"{entry['source']}:{entry['id']}"
+    args = {
+        "REPO_URL": hf_url(task_id, "repo-vul.tar.gz"),
+        "FUZZER": entry["fuzzer"],
+        "SANITIZER": entry["sanitizer"],
+        "BUILD_DIR": entry["build_dir"],
+        "EXTRA_PKGS": entry.get("extra_pkgs", ""),
+        "BASE_IMAGE": entry.get("base_image", DEFAULT_BASE_IMAGE),
+    }
+    poc = str(INDEX_PATH.parent / entry["poc"])
+    services = {
+        "vul": {
+            "build": {"context": str(_BUILDER_DIR),
+                      "dockerfile": "Dockerfile.vul", "args": args},
+            "volumes": [f"{poc}:/tmp/poc:ro"],
+        },
+        "fix": {
+            "build": {"context": str(_BUILDER_DIR),
+                      "dockerfile": "Dockerfile.fix",
+                      "args": {**args,
+                               "PATCH_URL": hf_url(task_id, "patch.diff")}},
+            "volumes": [f"{poc}:/tmp/poc:ro"],
+            "networks": ["fixnet"],
+        },
+    }
+    if entry.get("platform"):
+        for svc in services.values():
+            svc["platform"] = entry["platform"]
+    return {
+        "x-opencrl": {"agent": "vul"},
+        "services": services,
+        "networks": {"fixnet": {}},
+    }
+
+
 def _build_task(entry: Mapping[str, Any], level: int) -> Task:
-    """Build one placeholder variant on the mock backend (real bodies: modules#2/#3)."""
+    """Build one variant: real docker world + gated reward once onboarded,
+    placeholder on the mock backend before that."""
+    if not _is_onboarded(entry):
+        return Task(
+            goal=(
+                f"Cybergym task {entry['id']} ({entry['source']}/{entry['project']}, "
+                f"difficulty l{level}). Skeleton placeholder: the real world and goal "
+                f"arrive with the cybergym builders."
+            ),
+            reward=_placeholder_reward(),
+            world=None,
+            backend="mock",
+        )
     return Task(
         goal=(
             f"Cybergym task {entry['id']} ({entry['source']}/{entry['project']}, "
-            f"difficulty l{level}). Skeleton placeholder: the real world and goal "
-            f"arrive with the cybergym builders."
+            f"{entry['language']}, {entry['sanitizer']} sanitizer, difficulty "
+            f"l{level}): the fuzzer harness /out/{entry['fuzzer']} crashes on the "
+            f"input mounted at /tmp/poc. Explore the sources under /src, find the "
+            f"bug, and write a unified diff fixing it to /src/patch.diff."
         ),
-        reward=_placeholder_reward(),
-        world=None,
-        backend="mock",
+        reward=make_reward(fuzzer=entry["fuzzer"],
+                           patch_path="/src/patch.diff"),
+        world=_build_world(entry),
+        backend="docker",
     )
 
 

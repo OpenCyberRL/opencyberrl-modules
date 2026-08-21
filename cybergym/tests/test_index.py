@@ -52,8 +52,17 @@ tasks:
     assert entries[0]["levels"] == [0, 1, 2, 3]
 
 
-def test_real_shipped_index_is_valid_and_empty(registration):
-    assert registration.load_index() == []
+def test_real_shipped_index_is_valid(registration):
+    # The shipped index carries the tasks cybergym.onboard accepted; the
+    # first onboarded task (arvo:1065, modules#3) carries its full build
+    # recipe alongside the base schema.
+    entries = registration.load_index()
+    assert [e["id"] for e in entries] == ["1065"]
+    entry = entries[0]
+    assert entry["source"] == "arvo"
+    assert entry["fuzzer"] == "magic_fuzzer"
+    assert entry["poc"] == "pocs/arvo-1065.poc"
+    assert entry["provenance"]["oss_fuzz_issue"] == 42470716
 
 
 @pytest.mark.parametrize("text", ["", "tasks: []", "tasks:\n"])

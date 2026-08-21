@@ -69,13 +69,79 @@ def test_empty_index_registers_zero_tasks(registration, tmp_path, text):
     assert registration.register_index(index) == []
 
 
-def test_real_module_with_empty_index_imports_cleanly(registration):
-    # registration fixture imported task.py against the real (empty) index
-    assert registration.register_index(registration.INDEX_PATH) == []
+def test_real_module_index_registers_the_onboarded_task(registration):
+    # The shipped index carries the tasks cybergym.onboard accepted; the
+    # first onboarded task (arvo:1065, modules#3) registers all four levels.
+    assert registration.register_index(registration.INDEX_PATH) == [
+        f"cybergym_arvo_1065_l{n}" for n in range(4)]
+
+
+def test_onboarded_entry_gets_the_real_world_and_reward(registration, module_dir):
+    # An entry written by cybergym.onboard (it carries its build recipe) is
+    # wired with the real docker world built from cybergym/builder/ and the
+    # gated reward from cybergym/lib/reward.py — not the placeholder.
+    registration.register_index(registration.INDEX_PATH)
+    task = get_task("cybergym_arvo_1065_l2")
+    assert task.backend == "docker"
+    assert "placeholder" not in task.goal.lower()
+    assert "/out/magic_fuzzer" in task.goal and "/tmp/poc" in task.goal
+
+    world = task.world
+    assert world["x-opencrl"]["agent"] == "vul"
+    assert set(world["services"]) == {"vul", "fix"}
+    assert world["services"]["fix"]["networks"] == ["fixnet"]
+    assert world["networks"] == {"fixnet": {}}
+    for name, svc in world["services"].items():
+        build = svc["build"]
+        assert build["context"] == str(module_dir / "builder")
+        assert build["dockerfile"] == f"Dockerfile.{name}"
+        assert build["args"]["FUZZER"] == "magic_fuzzer"
+        assert build["args"]["SANITIZER"] == "memory"
+        assert svc["platform"] == "linux/amd64"
+        assert f"{module_dir / 'pocs' / 'arvo-1065.poc'}:/tmp/poc:ro" in svc["volumes"]
+    # The reference patch is applied only in the fix image's build.
+    assert "PATCH_URL" not in world["services"]["vul"]["build"]["args"]
+    assert world["services"]["fix"]["build"]["args"]["PATCH_URL"].endswith(
+        "/arvo/1065/patch.diff")
+
+    # The reward is the gated three-stage chain from cybergym/lib: the PoC
+    # crashes the vulnerable build (stage 1) and runs clean on the isolated
+    # fix build (stage 2); patch_fixes is honestly unscorable until the
+    # rebuild runner lands (modules#4), so the chain tops out at 0.5.
+    class _State:
+        def __init__(self, outputs):
+            self._outputs = outputs
+
+        def exec(self, cmd, host=None):
+            return self._outputs.get(host or "vul", "")
+
+        def file(self, path, host=None):
+            return None
+
+    crash = "WARNING: MemorySanitizer: use-of-uninitialized-value\n"
+    score = task.reward(_State({"vul": crash, "fix": "Executed /tmp/poc"}))
+    assert score.stages == {"crash_vul": 1.0, "clean_fix": 1.0, "patch_fixes": 0.0}
+    assert score.value == 0.5
+
+
+def test_synthetic_entries_stay_placeholders_alongside_the_onboarded_one(
+        registration, tmp_path):
+    # Mixed module: a not-yet-onboarded entry (no build recipe) keeps the
+    # mock-backend placeholder even while an onboarded entry has the real
+    # wiring — the module keeps installing while tasks wait for onboarding.
+    index = tmp_path / "index.yaml"
+    index.write_text(_synthetic_index("synth-mixed"))
+    registration.register_index(index)
+    task = get_task("cybergym_arvo_synth-mixed_l1")
+    assert task.backend == "mock"
+    assert "placeholder" in task.goal.lower()
+    assert task.reward(None) == 0.0
 
 
 def test_discover_imports_real_module_cleanly(module_dir):
-    discover(module_dir)  # empty shipped index: no error, nothing registered
+    # discover() imports task.py against the real shipped index (which now
+    # carries the onboarded arvo:1065 entry) without error.
+    discover(module_dir)
 
 
 def test_discover_end_to_end_with_synthetic_index(module_dir, tmp_path):
